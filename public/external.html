@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twilight SimRacing — Leaderboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="external.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-logo">
+        <span class="logo-twilight">TWILIGHT</span>
+        <span class="logo-simracing">SIMRACING</span>
+      </div>
+      <div class="topbar-center" id="compInfo">
+        <span class="comp-name" id="compName">—</span>
+        <span class="comp-track" id="compTrack"></span>
+      </div>
+      <div class="topbar-right">
+        <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+        <div class="clock" id="clock">00:00:00</div>
+      </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="main-content" id="mainContent">
+      <div class="waiting" id="waiting">
+        <div class="waiting-icon">🏁</div>
+        <div class="waiting-title">WAITING FOR COMPETITORS</div>
+        <div class="waiting-sub">Lap times will appear here once entered</div>
+      </div>
+
+      <!-- Podium top 3 -->
+      <section class="podium" id="podium" style="display:none">
+        <div class="podium-card podium-second" id="p2">
+          <div class="podium-pos">P2</div>
+          <div class="podium-name" id="p2-name">—</div>
+          <div class="podium-time" id="p2-time">—</div>
+          <div class="podium-gap" id="p2-gap"></div>
+          <div class="podium-sim" id="p2-sim"></div>
+        </div>
+        <div class="podium-card podium-first" id="p1">
+          <div class="podium-crown">👑</div>
+          <div class="podium-pos">P1</div>
+          <div class="podium-name" id="p1-name">—</div>
+          <div class="podium-time" id="p1-time">—</div>
+          <div class="podium-sim" id="p1-sim"></div>
+        </div>
+        <div class="podium-card podium-third" id="p3">
+          <div class="podium-pos">P3</div>
+          <div class="podium-name" id="p3-name">—</div>
+          <div class="podium-time" id="p3-time">—</div>
+          <div class="podium-gap" id="p3-gap"></div>
+          <div class="podium-sim" id="p3-sim"></div>
+        </div>
+      </section>
+
+      <!-- Rest of field table -->
+      <section class="table-section" id="tableSection" style="display:none">
+        <div class="table-wrapper">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th>POS</th>
+                <th>DRIVER</th>
+                <th>LAP TIME</th>
+                <th>GAP</th>
+                <th>SIM</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="external.js"></script>
+</body>
+</html>

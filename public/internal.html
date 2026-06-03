@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Twilight SimRacing — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="internal.css">
+</head>
+<body>
+  <!-- Top nav -->
+  <nav class="topnav">
+    <div class="nav-logo">
+      <span class="logo-t">TWILIGHT</span>
+      <span class="logo-s">SIMRACING</span>
+    </div>
+    <a href="/external" target="_blank" class="btn btn-outline">📺 BIG SCREEN</a>
+  </nav>
+
+  <!-- Competition bar -->
+  <div class="comp-bar">
+    <div class="comp-bar-left">
+      <select id="compSelect" class="comp-select">
+        <option value="">— Select Competition —</option>
+      </select>
+      <button class="btn btn-sm btn-outline" id="btnActivate" style="display:none">SET LIVE</button>
+      <button class="btn btn-sm btn-danger" id="btnDeleteComp" style="display:none">DELETE</button>
+    </div>
+    <button class="btn btn-primary" id="btnNewComp">+ NEW</button>
+  </div>
+
+  <!-- Active indicator -->
+  <div class="active-banner" id="activeBanner" style="display:none">
+    <span class="active-dot"></span>
+    <span id="activeBannerText">Competition on big screen</span>
+  </div>
+
+  <!-- Main content -->
+  <div class="content" id="content">
+    <div class="empty-state" id="emptyState">
+      <p>Select or create a competition above to get started.</p>
+    </div>
+
+    <!-- Add time form -->
+    <section class="card" id="addTimeSection" style="display:none">
+      <h2 class="section-title">Add Lap Time</h2>
+      <form id="addTimeForm">
+        <div class="form-row">
+          <label>Lap Time *
+            <input type="text" id="fLapTime" placeholder="1:23.456" autocomplete="off" required>
+            <span class="hint">Format: M:SS.mmm or SS.mmm</span>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Driver Name *
+            <input type="text" id="fDriverName" placeholder="John Smith" autocomplete="off" required>
+          </label>
+        </div>
+        <div class="form-row form-row-2">
+          <label>Simulator
+            <select id="fSimulator">
+              <option value="">—</option>
+              <option value="Sim 1">Sim 1</option>
+              <option value="Sim 2">Sim 2</option>
+              <option value="Sim 3">Sim 3</option>
+              <option value="Sim 4">Sim 4</option>
+            </select>
+          </label>
+          <label>Phone
+            <input type="tel" id="fPhone" placeholder="07700 000000">
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Notes
+            <input type="text" id="fNotes" placeholder="Optional notes">
+          </label>
+        </div>
+        <div class="form-error" id="formError" style="display:none"></div>
+        <button type="submit" class="btn btn-primary btn-large">ADD TIME</button>
+      </form>
+    </section>
+
+    <!-- Entries list -->
+    <section id="entriesSection" style="display:none">
+      <div class="entries-header">
+        <h2 class="section-title">Leaderboard</h2>
+        <span class="entry-count" id="entryCount">0 entries</span>
+      </div>
+      <div id="entriesList"></div>
+    </section>
+  </div>
+
+  <!-- New Competition Modal -->
+  <div class="modal-overlay" id="newCompModal" style="display:none">
+    <div class="modal">
+      <h2>New Competition</h2>
+      <form id="newCompForm">
+        <label>Competition Name *
+          <input type="text" id="mCompName" placeholder="e.g. Morning Session" required>
+        </label>
+        <label>Track Name *
+          <input type="text" id="mTrackName" placeholder="e.g. Spa-Francorchamps" required>
+        </label>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="btnCancelComp">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Entry Modal -->
+  <div class="modal-overlay" id="editModal" style="display:none">
+    <div class="modal">
+      <h2>Edit Entry</h2>
+      <form id="editForm">
+        <input type="hidden" id="editEntryId">
+        <label>Driver Name
+          <input type="text" id="eDriverName" required>
+        </label>
+        <label>Phone
+          <input type="tel" id="ePhone">
+        </label>
+        <label>Simulator
+          <select id="eSimulator">
+            <option value="">—</option>
+            <option value="Sim 1">Sim 1</option>
+            <option value="Sim 2">Sim 2</option>
+            <option value="Sim 3">Sim 3</option>
+            <option value="Sim 4">Sim 4</option>
+          </select>
+        </label>
+        <label>Notes
+          <input type="text" id="eNotes">
+        </label>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="btnCancelEdit">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="internal.js"></script>
+</body>
+</html>
