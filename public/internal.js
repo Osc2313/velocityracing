@@ -1,5 +1,14 @@
 const socket = io();
 
+// Check if server has persistent storage configured
+fetch('/api/status').then(r => r.json()).then(({ persistent }) => {
+  // Only show warning when hosted (not localhost), and not persistent
+  const isCloud = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+  if (isCloud && !persistent) {
+    document.getElementById('persistWarning').style.display = 'flex';
+  }
+}).catch(() => {});
+
 let competitions = {};
 let selectedCompId = null;
 
@@ -71,7 +80,7 @@ function updateActiveBanner() {
 function updateCompButtons() {
   const comp = selectedCompId ? competitions[selectedCompId] : null;
   const btnActivate = document.getElementById('btnActivate');
-  const btnDelete = document.getElementById('btnDeleteComp');
+  const dangerZone = document.getElementById('dangerZone');
   if (comp) {
     btnActivate.style.display = 'inline-flex';
     if (comp.active) {
@@ -84,10 +93,10 @@ function updateCompButtons() {
       btnActivate.classList.add('btn-outline');
     }
     btnActivate.disabled = false;
-    btnDelete.style.display = 'inline-flex';
+    dangerZone.style.display = 'block';
   } else {
     btnActivate.style.display = 'none';
-    btnDelete.style.display = 'none';
+    dangerZone.style.display = 'none';
   }
 }
 
@@ -233,6 +242,20 @@ async function deleteEntry(entryId) {
   }
 }
 
+// --- Delete competition (danger zone) ---
+document.getElementById('btnDeleteCompMain').addEventListener('click', async () => {
+  const comp = competitions[selectedCompId];
+  if (!comp) return;
+  const label = `"${comp.name} — ${comp.trackName}"`;
+  if (!confirm(`Delete ${label}?\n\nThis will permanently remove all ${comp.entries.length} lap time${comp.entries.length !== 1 ? 's' : ''}. This cannot be undone.`)) return;
+  try {
+    await apiFetch(`/api/competitions/${selectedCompId}`, 'DELETE');
+    selectedCompId = null;
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
 // --- Competition management ---
 document.getElementById('compSelect').addEventListener('change', (e) => {
   selectedCompId = e.target.value || null;
@@ -249,18 +272,6 @@ document.getElementById('btnActivate').addEventListener('click', async () => {
     } else {
       await apiFetch(`/api/competitions/${selectedCompId}/activate`, 'POST');
     }
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
-document.getElementById('btnDeleteComp').addEventListener('click', async () => {
-  const comp = competitions[selectedCompId];
-  if (!comp) return;
-  if (!confirm(`Delete "${comp.name}"? This will remove all ${comp.entries.length} entries.`)) return;
-  try {
-    await apiFetch(`/api/competitions/${selectedCompId}`, 'DELETE');
-    selectedCompId = null;
   } catch (err) {
     alert(err.message);
   }

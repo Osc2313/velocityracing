@@ -26,9 +26,14 @@
         <option value="">— Select Competition —</option>
       </select>
       <button class="btn btn-sm btn-outline" id="btnActivate" style="display:none">Set Live</button>
-      <button class="btn btn-sm btn-danger" id="btnDeleteComp" style="display:none">Delete</button>
     </div>
     <button class="btn btn-primary" id="btnNewComp">+ NEW</button>
+  </div>
+
+  <!-- Persistence warning (shown when data is not backed by Redis) -->
+  <div class="persist-warning" id="persistWarning" style="display:none">
+    ⚠️ Data is not persistent — it will be lost if the server restarts or redeploys.
+    <a href="https://github.com/osc2313/velocityracing#persistent-storage" target="_blank">Set up persistent storage →</a>
   </div>
 
   <!-- Active indicator -->
@@ -107,6 +112,18 @@
         <span class="entry-count" id="entryCount">0 entries</span>
       </div>
       <div id="entriesList"></div>
+    </section>
+
+    <!-- Danger zone -->
+    <section class="card danger-zone" id="dangerZone" style="display:none">
+      <h2 class="section-title danger-title">Danger Zone</h2>
+      <div class="danger-row">
+        <div>
+          <div class="danger-label">Delete this competition</div>
+          <div class="danger-desc">Permanently removes the competition and all its lap times. This cannot be undone.</div>
+        </div>
+        <button class="btn btn-danger-solid" id="btnDeleteCompMain">Delete</button>
+      </div>
     </section>
   </div>
 

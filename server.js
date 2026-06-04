@@ -9,16 +9,11 @@ const { exec } = require('child_process');
 const QRCode = require('qrcode');
 const multer = require('multer');
 const { createWorker } = require('tesseract.js');
+const storage = require('./storage');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-
-// When packaged with pkg, data lives next to the .exe; otherwise in project root
-const DATA_DIR = process.pkg
-  ? path.join(path.dirname(process.execPath), 'data')
-  : path.join(__dirname, 'data');
-const DB_PATH = path.join(DATA_DIR, 'db.json');
 
 // Static files: always at __dirname (bundled into pkg snapshot or on disk)
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -49,23 +44,8 @@ function openBrowser(url) {
 // --- Data store ---
 let db = { competitions: {}, broadcastMessage: '' };
 
-function loadDb() {
-  try {
-    if (fs.existsSync(DB_PATH)) {
-      db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-    }
-  } catch (e) {
-    console.error('Failed to load db, starting fresh:', e.message);
-  }
-}
-
-function saveDb() {
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
-  } catch (e) {
-    console.error('Failed to save db:', e.message);
-  }
+async function saveDb() {
+  await storage.save(db);
 }
 
 function broadcast() {
@@ -264,14 +244,14 @@ app.post('/api/competitions', (req, res) => {
   if (!name || !trackName) return res.status(400).json({ error: 'name and trackName required' });
   const id = crypto.randomUUID();
   db.competitions[id] = { id, name, trackName, createdAt: Date.now(), active: false, entries: [] };
-  saveDb(); broadcast();
+  saveDb().then(broadcast);
   res.json(db.competitions[id]);
 });
 
 app.delete('/api/competitions/:id', (req, res) => {
   if (!db.competitions[req.params.id]) return res.status(404).json({ error: 'Not found' });
   delete db.competitions[req.params.id];
-  saveDb(); broadcast();
+  saveDb().then(broadcast);
   res.json({ ok: true });
 });
 
@@ -279,14 +259,14 @@ app.post('/api/competitions/:id/activate', (req, res) => {
   if (!db.competitions[req.params.id]) return res.status(404).json({ error: 'Not found' });
   Object.values(db.competitions).forEach(c => { c.active = false; });
   db.competitions[req.params.id].active = true;
-  saveDb(); broadcast();
+  saveDb().then(broadcast);
   res.json({ ok: true });
 });
 
 app.post('/api/competitions/:id/deactivate', (req, res) => {
   if (!db.competitions[req.params.id]) return res.status(404).json({ error: 'Not found' });
   db.competitions[req.params.id].active = false;
-  saveDb(); broadcast();
+  saveDb().then(broadcast);
   res.json({ ok: true });
 });
 
@@ -312,7 +292,7 @@ app.post('/api/competitions/:id/entries', (req, res) => {
   };
   comp.entries.push(entry);
   sortEntries(comp);
-  saveDb(); broadcast();
+  saveDb().then(broadcast);
   setTimeout(() => { const e = comp.entries.find(x => x.id === entry.id); if (e) e.isNew = false; }, 3000);
   res.json(entry);
 });
@@ -327,7 +307,7 @@ app.put('/api/competitions/:id/entries/:entryId', (req, res) => {
   if (phone !== undefined) entry.phone = phone;
   if (simulator !== undefined) entry.simulator = simulator;
   if (notes !== undefined) entry.notes = notes;
-  saveDb(); broadcast();
+  saveDb().then(broadcast);
   res.json(entry);
 });
 
@@ -338,7 +318,7 @@ app.delete('/api/competitions/:id/entries/:entryId', (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Entry not found' });
   comp.entries.splice(idx, 1);
   sortEntries(comp);
-  saveDb(); broadcast();
+  saveDb().then(broadcast);
   res.json({ ok: true });
 });
 
@@ -403,7 +383,7 @@ app.post('/api/scan-laptime', upload.single('image'), async (req, res) => {
 app.put('/api/message', (req, res) => {
   const { message } = req.body;
   db.broadcastMessage = (message || '').trim();
-  saveDb(); broadcast();
+  saveDb().then(broadcast);
   res.json({ ok: true });
 });
 
@@ -412,13 +392,20 @@ io.on('connection', (socket) => {
   socket.emit('state', { competitions: db.competitions, broadcastMessage: db.broadcastMessage });
 });
 
+// --- Status endpoint (lets admin panel show persistence warning) ---
+app.get('/api/status', (req, res) => {
+  res.json({ persistent: storage.isPersistent() });
+});
+
 // --- Start ---
-loadDb();
-server.listen(PORT, '0.0.0.0', () => {
-  const launcherUrl = `http://localhost:${PORT}`;
-  console.log(`\nVelocity Racing Leaderboard running!`);
-  console.log(`Launcher: ${launcherUrl}`);
-  getLocalIPs().forEach(ip => console.log(`Network: http://${ip.address}:${PORT}`));
-  // Auto-open launcher in browser
-  if (!process.env.NO_OPEN) openBrowser(launcherUrl);
+storage.load().then(loaded => {
+  db = loaded;
+  server.listen(PORT, '0.0.0.0', () => {
+    const launcherUrl = `http://localhost:${PORT}`;
+    console.log(`\nVelocity Racing Leaderboard running!`);
+    console.log(`Storage: ${storage.isPersistent() ? 'Upstash Redis (persistent)' : 'local file (ephemeral on cloud)'}`);
+    console.log(`Launcher: ${launcherUrl}`);
+    getLocalIPs().forEach(ip => console.log(`Network: http://${ip.address}:${PORT}`));
+    if (!process.env.NO_OPEN) openBrowser(launcherUrl);
+  });
 });

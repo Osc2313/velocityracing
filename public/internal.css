@@ -58,6 +58,20 @@ html, body {
   letter-spacing: -0.02em;
 }
 
+/* ---- PERSIST WARNING ---- */
+.persist-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 1rem;
+  background: #fffbeb;
+  border-bottom: 1px solid #fde68a;
+  font-size: 0.78rem;
+  color: #92400e;
+}
+.persist-warning a { color: #2563eb; font-weight: 500; }
+
 /* ---- COMPETITION BAR ---- */
 .comp-bar {
   display: flex;
@@ -409,6 +423,43 @@ select {
   gap: 0.5rem;
   padding-top: 0.75rem;
 }
+
+/* ---- DANGER ZONE ---- */
+.danger-zone {
+  border-color: var(--red-border);
+  border-left: 3px solid var(--red);
+}
+.danger-title { color: var(--red); }
+.danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.danger-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+}
+.danger-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.btn-danger-solid {
+  background: var(--red);
+  color: #fff;
+  border: none;
+  flex-shrink: 0;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-danger-solid:hover { background: #dc2626; }
 
 /* ---- MODAL ---- */
 .modal-overlay {
