@@ -1,13 +1,5 @@
 const socket = io();
 
-// Check if server has persistent storage configured
-fetch('/api/status').then(r => r.json()).then(({ persistent }) => {
-  // Only show warning when hosted (not localhost), and not persistent
-  const isCloud = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
-  if (isCloud && !persistent) {
-    document.getElementById('persistWarning').style.display = 'flex';
-  }
-}).catch(() => {});
 
 let competitions = {};
 let selectedCompId = null;
