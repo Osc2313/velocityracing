@@ -521,9 +521,10 @@ select {
 }
 .staff-card-status {
   font-size: 0.72rem;
-  color: var(--text-faint);
+  color: var(--blue);
+  font-weight: 500;
   padding: 0.2rem 0.6rem;
-  background: var(--bg3);
+  background: var(--blue-light);
   border-radius: 20px;
   max-width: 100%;
   overflow: hidden;
