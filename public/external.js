@@ -45,7 +45,7 @@ function render(state) {
     banner.style.display = 'none';
   }
 
-  const active = Object.values(competitions).find(c => c.active);
+  const active = Object.values(competitions).filter(Boolean).find(c => c.active);
 
   const waiting = document.getElementById('waiting');
   const podium = document.getElementById('podium');

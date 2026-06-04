@@ -12,7 +12,7 @@ const DATA_DIR = process.pkg
 const DB_PATH = path.join(DATA_DIR, 'db.json');
 const DB_KEY = 'velocity_racing_db';
 
-const EMPTY_DB = () => ({ competitions: {}, broadcastMessage: '' });
+const EMPTY_DB = () => ({ competitions: {}, broadcastMessage: '', staff: {}, statusOptions: [], schedule: [] });
 
 // --- Upstash Redis (cloud persistent storage) ---
 function makeRedis() {

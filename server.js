@@ -48,6 +48,13 @@ const DEFAULT_STATUS_OPTIONS = ['On Break', 'On Checkout', 'On Sim Supervision',
 let db = { competitions: {}, broadcastMessage: '', staff: {}, statusOptions: [], schedule: [] };
 
 function ensureDefaults() {
+  if (!db.competitions || typeof db.competitions !== 'object') db.competitions = {};
+  // Remove any null/corrupt competition entries
+  for (const id of Object.keys(db.competitions)) {
+    if (!db.competitions[id] || typeof db.competitions[id] !== 'object') {
+      delete db.competitions[id];
+    }
+  }
   if (!db.staff) db.staff = {};
   if (!db.statusOptions || db.statusOptions.length === 0) db.statusOptions = [...DEFAULT_STATUS_OPTIONS];
   if (!db.schedule) db.schedule = [];

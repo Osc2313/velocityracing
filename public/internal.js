@@ -43,7 +43,11 @@ async function apiFetch(url, method = 'GET', body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch {
+    throw new Error(`Server error (${res.status}) — please try again`);
+  }
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
@@ -54,6 +58,7 @@ function populateCompSelect() {
   const prevVal = sel.value;
   sel.innerHTML = '<option value="">— Select Competition —</option>';
   Object.values(competitions)
+    .filter(Boolean)
     .sort((a, b) => b.createdAt - a.createdAt)
     .forEach(c => {
       const opt = document.createElement('option');
@@ -71,7 +76,7 @@ function populateCompSelect() {
 }
 
 function updateActiveBanner() {
-  const active = Object.values(competitions).find(c => c.active);
+  const active = Object.values(competitions).filter(Boolean).find(c => c.active);
   const banner = document.getElementById('activeBanner');
   if (active) {
     banner.style.display = 'flex';
@@ -570,6 +575,7 @@ function populateScheduleCompSelect() {
   const prev = sel.value;
   sel.innerHTML = '<option value="">— Select a competition —</option>';
   Object.values(competitions)
+    .filter(Boolean)
     .sort((a, b) => b.createdAt - a.createdAt)
     .forEach(c => {
       const opt = document.createElement('option');
