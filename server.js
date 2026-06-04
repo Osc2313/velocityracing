@@ -287,6 +287,16 @@ app.post('/api/competitions', (req, res) => {
   res.json(db.competitions[id]);
 });
 
+app.patch('/api/competitions/:id', (req, res) => {
+  const comp = db.competitions[req.params.id];
+  if (!comp) return res.status(404).json({ error: 'Not found' });
+  const { name, trackName } = req.body;
+  if (name !== undefined) comp.name = name.trim();
+  if (trackName !== undefined) comp.trackName = trackName.trim();
+  saveDb().then(broadcast);
+  res.json(comp);
+});
+
 app.delete('/api/competitions/:id', (req, res) => {
   if (!db.competitions[req.params.id]) return res.status(404).json({ error: 'Not found' });
   delete db.competitions[req.params.id];

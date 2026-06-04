@@ -36,6 +36,7 @@
           <option value="">— Select Competition —</option>
         </select>
         <button class="btn btn-sm btn-outline" id="btnActivate" style="display:none">Set Live</button>
+      <button class="btn btn-sm btn-outline" id="btnRenameComp" style="display:none">Rename</button>
       </div>
       <button class="btn btn-primary" id="btnNewComp">+ NEW</button>
     </div>
@@ -230,6 +231,25 @@
         <div class="modal-actions">
           <button type="button" class="btn btn-outline" id="btnCancelComp">Cancel</button>
           <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Rename Competition Modal -->
+  <div class="modal-overlay" id="renameCompModal" style="display:none">
+    <div class="modal">
+      <h2>Rename Competition</h2>
+      <form id="renameCompForm">
+        <label>Competition Name *
+          <input type="text" id="rCompName" required>
+        </label>
+        <label>Track Name *
+          <input type="text" id="rTrackName" required>
+        </label>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="btnCancelRename">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
         </div>
       </form>
     </div>

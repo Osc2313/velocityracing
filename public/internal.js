@@ -85,9 +85,11 @@ function updateActiveBanner() {
 function updateCompButtons() {
   const comp = selectedCompId ? competitions[selectedCompId] : null;
   const btnActivate = document.getElementById('btnActivate');
+  const btnRename = document.getElementById('btnRenameComp');
   const dangerZone = document.getElementById('dangerZone');
   if (comp) {
     btnActivate.style.display = 'inline-flex';
+    btnRename.style.display = 'inline-flex';
     if (comp.active) {
       btnActivate.textContent = 'Hide from Screen';
       btnActivate.classList.remove('btn-outline');
@@ -101,6 +103,7 @@ function updateCompButtons() {
     dangerZone.style.display = 'block';
   } else {
     btnActivate.style.display = 'none';
+    btnRename.style.display = 'none';
     dangerZone.style.display = 'none';
   }
 }
@@ -246,6 +249,37 @@ async function deleteEntry(entryId) {
     alert(err.message);
   }
 }
+
+// --- Rename competition ---
+document.getElementById('btnRenameComp').addEventListener('click', () => {
+  const comp = competitions[selectedCompId];
+  if (!comp) return;
+  document.getElementById('rCompName').value = comp.name;
+  document.getElementById('rTrackName').value = comp.trackName;
+  document.getElementById('renameCompModal').style.display = 'flex';
+  document.getElementById('rCompName').focus();
+});
+
+document.getElementById('btnCancelRename').addEventListener('click', () => {
+  document.getElementById('renameCompModal').style.display = 'none';
+});
+
+document.getElementById('renameCompModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('renameCompModal').style.display = 'none';
+});
+
+document.getElementById('renameCompForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('rCompName').value.trim();
+  const trackName = document.getElementById('rTrackName').value.trim();
+  if (!name || !trackName) return;
+  try {
+    await apiFetch(`/api/competitions/${selectedCompId}`, 'PATCH', { name, trackName });
+    document.getElementById('renameCompModal').style.display = 'none';
+  } catch (err) {
+    alert(err.message);
+  }
+});
 
 // --- Delete competition (danger zone) ---
 document.getElementById('btnDeleteCompMain').addEventListener('click', async () => {
