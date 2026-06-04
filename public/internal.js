@@ -4,14 +4,16 @@ let competitions = {};
 let selectedCompId = null;
 let staffData = {};
 let statusOptions = [];
+let scheduleItems = [];
 let currentStaff = localStorage.getItem('vr_staff_name') || null;
 
 // ---- Tab switching ----
 function switchTab(tab) {
-  document.getElementById('panelLeaderboard').style.display = tab === 'leaderboard' ? '' : 'none';
-  document.getElementById('panelStaff').style.display = tab === 'staff' ? '' : 'none';
-  document.getElementById('tabLeaderboard').classList.toggle('active', tab === 'leaderboard');
-  document.getElementById('tabStaff').classList.toggle('active', tab === 'staff');
+  ['leaderboard', 'schedule', 'staff'].forEach(t => {
+    document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = t === tab ? '' : 'none';
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+  });
+  if (tab === 'schedule') populateScheduleCompSelect();
 }
 window.switchTab = switchTab;
 
@@ -323,11 +325,13 @@ socket.on('state', (state) => {
   competitions = state.competitions || state;
   staffData = state.staff || {};
   statusOptions = state.statusOptions || [];
+  scheduleItems = state.schedule || [];
   populateCompSelect();
   updateActiveBanner();
   updateCompButtons();
   updateMainView();
   renderStaffPortal();
+  renderSchedule();
 
   // Sync message input only when not focused
   const input = document.getElementById('broadcastInput');
@@ -556,3 +560,119 @@ window.removeStatusOption = removeStatusOption;
 function escAttr(s) {
   return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
 }
+
+// ============================================================
+// SCHEDULE
+// ============================================================
+
+function populateScheduleCompSelect() {
+  const sel = document.getElementById('sCompetition');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Select a competition —</option>';
+  Object.values(competitions)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.name} — ${c.trackName}`;
+      sel.appendChild(opt);
+    });
+  if (prev) sel.value = prev;
+}
+
+function formatScheduleTime(ts) {
+  const d = new Date(ts);
+  const h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const hour = h % 12 || 12;
+  const time = `${hour}:${String(m).padStart(2, '0')}${ampm}`;
+  const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return { time, date };
+}
+
+function renderSchedule() {
+  const list = document.getElementById('scheduleList');
+  const countEl = document.getElementById('scheduleCount');
+  if (!list) return;
+
+  const now = Date.now();
+  const sorted = [...scheduleItems].sort((a, b) => a.scheduledAt - b.scheduledAt);
+  const upcoming = sorted.filter(s => !s.triggered);
+  const past = sorted.filter(s => s.triggered);
+
+  countEl.textContent = `${upcoming.length} upcoming`;
+
+  if (sorted.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-faint);font-size:0.85rem;text-align:center;padding:1.5rem">No sessions scheduled yet.</p>';
+    return;
+  }
+
+  list.innerHTML = sorted.map(item => {
+    const comp = competitions[item.competitionId];
+    const compName = comp ? `${comp.name} — ${comp.trackName}` : 'Deleted competition';
+    const isLive = comp && comp.active && item.triggered;
+    const { time, date } = formatScheduleTime(item.scheduledAt);
+    const badge = isLive
+      ? '<span class="schedule-badge live">● Live</span>'
+      : item.triggered
+        ? '<span class="schedule-badge done">Done</span>'
+        : '<span class="schedule-badge upcoming">Upcoming</span>';
+    return `
+      <div class="schedule-item ${item.triggered ? 'triggered' : ''}">
+        <div class="schedule-time-block">
+          <div class="schedule-time">${time}</div>
+          <div class="schedule-date">${date}</div>
+        </div>
+        <div class="schedule-info">
+          <div class="schedule-comp">${escHtml(compName)}</div>
+          ${item.label ? `<div class="schedule-label">${escHtml(item.label)}</div>` : ''}
+        </div>
+        ${badge}
+        <button class="btn-remove" onclick="deleteScheduleItem('${item.id}')" title="Remove">×</button>
+      </div>`;
+  }).join('');
+}
+
+// Set default datetime to now + 1 hour rounded to nearest 15 min
+function initDatetimeInput() {
+  const input = document.getElementById('sDateTime');
+  if (!input || input.value) return;
+  const d = new Date(Date.now() + 60 * 60 * 1000);
+  d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
+  // datetime-local format: YYYY-MM-DDTHH:MM
+  const pad = n => String(n).padStart(2, '0');
+  input.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('scheduleError');
+  errEl.style.display = 'none';
+  const competitionId = document.getElementById('sCompetition').value;
+  const dtVal = document.getElementById('sDateTime').value;
+  const label = document.getElementById('sLabel').value.trim();
+  if (!competitionId || !dtVal) return;
+  const scheduledAt = new Date(dtVal).getTime();
+  try {
+    await apiFetch('/api/schedule', 'POST', { competitionId, scheduledAt, label });
+    document.getElementById('sLabel').value = '';
+    document.getElementById('sCompetition').value = '';
+    initDatetimeInput();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+});
+
+async function deleteScheduleItem(id) {
+  if (!confirm('Remove this scheduled rotation?')) return;
+  await apiFetch(`/api/schedule/${id}`, 'DELETE');
+}
+window.deleteScheduleItem = deleteScheduleItem;
+
+// Init datetime when switching to schedule tab
+const origSwitchTab = window.switchTab;
+window.switchTab = function(tab) {
+  origSwitchTab(tab);
+  if (tab === 'schedule') initDatetimeInput();
+};

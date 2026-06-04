@@ -45,11 +45,12 @@ const STAFF_NAMES = ['Oscar', 'Greg', 'Myron', 'Riley'];
 const DEFAULT_STATUS_OPTIONS = ['On Break', 'On Checkout', 'On Sim Supervision', 'On Crowd Control', 'On Tours'];
 
 // --- Data store ---
-let db = { competitions: {}, broadcastMessage: '', staff: {}, statusOptions: [] };
+let db = { competitions: {}, broadcastMessage: '', staff: {}, statusOptions: [], schedule: [] };
 
-function ensureStaffDefaults() {
+function ensureDefaults() {
   if (!db.staff) db.staff = {};
   if (!db.statusOptions || db.statusOptions.length === 0) db.statusOptions = [...DEFAULT_STATUS_OPTIONS];
+  if (!db.schedule) db.schedule = [];
   for (const name of STAFF_NAMES) {
     if (!db.staff[name]) db.staff[name] = { role: '', status: '', updatedAt: null };
   }
@@ -60,8 +61,35 @@ async function saveDb() {
 }
 
 function broadcast() {
-  io.emit('state', { competitions: db.competitions, broadcastMessage: db.broadcastMessage, staff: db.staff, statusOptions: db.statusOptions });
+  io.emit('state', {
+    competitions: db.competitions,
+    broadcastMessage: db.broadcastMessage,
+    staff: db.staff,
+    statusOptions: db.statusOptions,
+    schedule: db.schedule,
+  });
 }
+
+// --- Schedule auto-rotation ---
+// Runs every 30s; fires any schedule items whose time has passed
+function checkSchedule() {
+  const now = Date.now();
+  let changed = false;
+  for (const item of db.schedule) {
+    if (!item.triggered && item.scheduledAt <= now) {
+      const comp = db.competitions[item.competitionId];
+      if (comp) {
+        Object.values(db.competitions).forEach(c => { c.active = false; });
+        comp.active = true;
+        console.log(`[schedule] Auto-activated: ${comp.name} (${new Date(item.scheduledAt).toLocaleTimeString()})`);
+      }
+      item.triggered = true;
+      changed = true;
+    }
+  }
+  if (changed) saveDb().then(broadcast);
+}
+setInterval(checkSchedule, 30000);
 
 function parselapTime(str) {
   if (!str) return null;
@@ -390,6 +418,31 @@ app.post('/api/scan-laptime', upload.single('image'), async (req, res) => {
   }
 });
 
+// --- Schedule ---
+app.get('/api/schedule', (req, res) => res.json(db.schedule));
+
+app.post('/api/schedule', (req, res) => {
+  const { competitionId, scheduledAt, label } = req.body;
+  if (!competitionId || !scheduledAt) return res.status(400).json({ error: 'competitionId and scheduledAt required' });
+  if (!db.competitions[competitionId]) return res.status(400).json({ error: 'Competition not found' });
+  const item = { id: crypto.randomUUID(), competitionId, scheduledAt: Number(scheduledAt), label: label || '', triggered: Date.now() > Number(scheduledAt) };
+  // If time already passed, activate immediately
+  if (item.triggered) {
+    Object.values(db.competitions).forEach(c => { c.active = false; });
+    db.competitions[competitionId].active = true;
+  }
+  db.schedule.push(item);
+  db.schedule.sort((a, b) => a.scheduledAt - b.scheduledAt);
+  saveDb().then(broadcast);
+  res.json(item);
+});
+
+app.delete('/api/schedule/:id', (req, res) => {
+  db.schedule = db.schedule.filter(s => s.id !== req.params.id);
+  saveDb().then(broadcast);
+  res.json({ ok: true });
+});
+
 // --- Staff portal ---
 app.get('/api/staff', (req, res) => {
   res.json({ staff: db.staff, statusOptions: db.statusOptions });
@@ -436,7 +489,13 @@ app.put('/api/message', (req, res) => {
 
 // --- Socket.io ---
 io.on('connection', (socket) => {
-  socket.emit('state', { competitions: db.competitions, broadcastMessage: db.broadcastMessage, staff: db.staff, statusOptions: db.statusOptions });
+  socket.emit('state', {
+    competitions: db.competitions,
+    broadcastMessage: db.broadcastMessage,
+    staff: db.staff,
+    statusOptions: db.statusOptions,
+    schedule: db.schedule,
+  });
 });
 
 // --- Status endpoint (lets admin panel show persistence warning) ---
@@ -447,7 +506,7 @@ app.get('/api/status', (req, res) => {
 // --- Start ---
 storage.load().then(loaded => {
   db = loaded;
-  ensureStaffDefaults();
+  ensureDefaults();
   server.listen(PORT, '0.0.0.0', () => {
     const launcherUrl = `http://localhost:${PORT}`;
     console.log(`\nVelocity Racing Leaderboard running!`);

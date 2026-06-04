@@ -23,6 +23,7 @@
   <!-- Tab bar -->
   <div class="tab-bar">
     <button class="tab active" id="tabLeaderboard" onclick="switchTab('leaderboard')">🏁 Leaderboard</button>
+    <button class="tab" id="tabSchedule" onclick="switchTab('schedule')">📅 Schedule</button>
     <button class="tab" id="tabStaff" onclick="switchTab('staff')">👥 Staff Portal</button>
   </div>
 
@@ -125,6 +126,42 @@
           <button class="btn btn-danger-solid" id="btnDeleteCompMain">Delete</button>
         </div>
       </section>
+    </div>
+  </div>
+
+  <!-- ===================== SCHEDULE TAB ===================== -->
+  <div id="panelSchedule" style="display:none">
+    <div class="content">
+
+      <!-- Add scheduled rotation -->
+      <section class="card">
+        <h2 class="section-title">Add Scheduled Rotation</h2>
+        <form id="scheduleForm">
+          <label>Competition / Session
+            <select id="sCompetition" required>
+              <option value="">— Select a competition —</option>
+            </select>
+          </label>
+          <label>Date &amp; Time
+            <input type="datetime-local" id="sDateTime" required>
+          </label>
+          <label>Label <span style="font-weight:400;text-transform:none">(optional note)</span>
+            <input type="text" id="sLabel" placeholder="e.g. Round 2 starts" maxlength="60">
+          </label>
+          <div class="form-error" id="scheduleError" style="display:none"></div>
+          <button type="submit" class="btn btn-primary btn-large">Add to Schedule</button>
+        </form>
+      </section>
+
+      <!-- Upcoming schedule -->
+      <section>
+        <div class="entries-header">
+          <h2 class="section-title">Upcoming</h2>
+          <span class="entry-count" id="scheduleCount"></span>
+        </div>
+        <div id="scheduleList"></div>
+      </section>
+
     </div>
   </div>
 
