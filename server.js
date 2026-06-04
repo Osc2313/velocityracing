@@ -99,29 +99,30 @@ app.use(express.static(PUBLIC_DIR));
 
 // Launcher page — served from route so we can inject live QR codes
 app.get('/', async (req, res) => {
-  const ips = getLocalIPs();
-  const primaryIp = ips.length > 0 ? ips[0].address : 'localhost';
-  const base = `http://${primaryIp}:${PORT}`;
+  // Use the actual request host so links work on Render, localhost, or any other host
+  const proto = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  const base = `${proto}://${host}`;
 
   const internalUrl = `${base}/internal`;
   const externalUrl = `${base}/external`;
 
-  const internalQR = await QRCode.toDataURL(internalUrl, { width: 220, margin: 1, color: { dark: '#f0f0f8', light: '#12121e' } });
-  const externalQR = await QRCode.toDataURL(externalUrl, { width: 220, margin: 1, color: { dark: '#f0f0f8', light: '#12121e' } });
+  const internalQR = await QRCode.toDataURL(internalUrl, { width: 220, margin: 2, color: { dark: '#1e293b', light: '#f8fafc' } });
+  const externalQR = await QRCode.toDataURL(externalUrl, { width: 220, margin: 2, color: { dark: '#1e293b', light: '#f8fafc' } });
 
   res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Twilight SimRacing — Launcher</title>
+  <title>Twilight SimRacing</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #07070d;
-      color: #f0f0f8;
+      background: #f8fafc;
+      color: #0f172a;
       font-family: 'Inter', sans-serif;
       min-height: 100vh;
       display: flex;
@@ -129,113 +130,122 @@ app.get('/', async (req, res) => {
       align-items: center;
       justify-content: center;
       padding: 2rem 1rem;
-      gap: 2rem;
+      gap: 2.5rem;
     }
     .logo { text-align: center; }
     .logo-main {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 2.2rem;
+      font-size: 1.5rem;
       font-weight: 700;
-      color: #f0c040;
-      letter-spacing: 0.15em;
+      color: #0f172a;
+      letter-spacing: -0.02em;
     }
+    .logo-main span { color: #2563eb; }
     .logo-sub {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 0.9rem;
-      color: #6a6a88;
-      letter-spacing: 0.3em;
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: #94a3b8;
+      letter-spacing: 0.05em;
+      margin-top: 2px;
     }
     .cards {
       display: flex;
-      gap: 1.5rem;
+      gap: 1.25rem;
       flex-wrap: wrap;
       justify-content: center;
     }
     .card {
-      background: #12121e;
-      border: 1px solid rgba(255,255,255,0.1);
+      background: #fff;
+      border: 1px solid #e2e8f0;
       border-radius: 16px;
-      padding: 1.5rem;
+      padding: 1.75rem 1.5rem;
       text-align: center;
       width: 260px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
-    .card.phone { border-color: rgba(123,94,167,0.5); }
-    .card.screen { border-color: rgba(240,192,64,0.4); }
-    .card-icon { font-size: 2rem; }
+    .card-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
     .card-title {
-      font-family: 'Rajdhani', sans-serif;
       font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      color: #f0f0f8;
+      font-weight: 600;
+      color: #0f172a;
     }
-    .card-desc { font-size: 0.8rem; color: #6a6a88; line-height: 1.5; }
-    .qr { border-radius: 10px; overflow: hidden; }
+    .card-desc {
+      font-size: 0.8rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .qr {
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      padding: 8px;
+      background: #f8fafc;
+    }
     .url {
-      font-size: 0.72rem;
-      color: #6a6a88;
+      font-size: 0.68rem;
+      color: #94a3b8;
       word-break: break-all;
       font-family: monospace;
     }
     .btn {
       display: inline-block;
-      padding: 0.6rem 1.4rem;
+      width: 100%;
+      padding: 0.65rem 1.25rem;
       border-radius: 8px;
       border: none;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 0.95rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
       cursor: pointer;
       text-decoration: none;
-      transition: opacity 0.15s;
+      transition: all 0.15s;
     }
-    .btn:hover { opacity: 0.85; }
-    .btn-purple { background: #7b5ea7; color: #fff; }
-    .btn-gold { background: #f0c040; color: #07070d; }
-    .ip-info {
-      font-size: 0.78rem;
-      color: #6a6a88;
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-dark { background: #0f172a; color: #fff; }
+    .btn-dark:hover { background: #1e293b; }
+    .footer {
+      font-size: 0.75rem;
+      color: #94a3b8;
       text-align: center;
     }
-    .ip-info span { color: #f0f0f8; font-weight: 600; }
   </style>
 </head>
 <body>
   <div class="logo">
-    <div class="logo-main">TWILIGHT SIMRACING</div>
-    <div class="logo-sub">LEADERBOARD SYSTEM</div>
+    <div class="logo-main">Twilight <span>SimRacing</span></div>
+    <div class="logo-sub">Leaderboard System</div>
   </div>
 
   <div class="cards">
-    <div class="card phone">
-      <div class="card-icon">📱</div>
-      <div class="card-title">YOUR PHONE</div>
-      <div class="card-desc">Scan to open the admin panel — enter lap times and manage competitions</div>
-      <img class="qr" src="${internalQR}" width="200" height="200" alt="QR Code">
+    <div class="card">
+      <div class="card-label">Admin</div>
+      <div class="card-title">Phone / Tablet</div>
+      <div class="card-desc">Scan to enter lap times and manage competitions from your phone</div>
+      <img class="qr" src="${internalQR}" width="180" height="180" alt="QR Code for admin">
       <div class="url">${internalUrl}</div>
-      <a href="${internalUrl}" class="btn btn-purple" target="_blank">OPEN ADMIN</a>
+      <a href="/internal" class="btn btn-blue">Open Admin Panel</a>
     </div>
 
-    <div class="card screen">
-      <div class="card-icon">📺</div>
-      <div class="card-title">BIG SCREEN</div>
-      <div class="card-desc">Open this on the TV or monitor — shows the live leaderboard</div>
-      <img class="qr" src="${externalQR}" width="200" height="200" alt="QR Code">
+    <div class="card">
+      <div class="card-label">Display</div>
+      <div class="card-title">Big Screen / TV</div>
+      <div class="card-desc">Open this on your TV or monitor to show the live leaderboard</div>
+      <img class="qr" src="${externalQR}" width="180" height="180" alt="QR Code for leaderboard">
       <div class="url">${externalUrl}</div>
-      <a href="${externalUrl}" class="btn btn-gold" target="_blank">OPEN LEADERBOARD</a>
+      <a href="/external" class="btn btn-dark">Open Leaderboard</a>
     </div>
   </div>
 
-  <div class="ip-info">
-    Server running on <span>${primaryIp}:${PORT}</span> &nbsp;·&nbsp;
-    All devices must be on the same Wi-Fi
-    ${ips.length > 1 ? `<br>Other IPs: ${ips.slice(1).map(i => i.address).join(', ')}` : ''}
-  </div>
+  <div class="footer">All devices must be on the same network when running locally</div>
 </body>
 </html>`);
 });
