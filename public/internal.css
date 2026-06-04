@@ -246,6 +246,14 @@ select {
 }
 .btn-outline:hover { border-color: var(--text-muted); background: var(--bg3); }
 
+.btn-live {
+  background: transparent;
+  color: #15803d;
+  border: 1px solid var(--green-border);
+  background: var(--green-bg);
+}
+.btn-live:hover { background: #dcfce7; }
+
 .btn-danger {
   background: transparent;
   color: var(--red);

@@ -74,8 +74,16 @@ function updateCompButtons() {
   const btnDelete = document.getElementById('btnDeleteComp');
   if (comp) {
     btnActivate.style.display = 'inline-flex';
-    btnActivate.textContent = comp.active ? '✅ LIVE' : 'SET LIVE';
-    btnActivate.disabled = comp.active;
+    if (comp.active) {
+      btnActivate.textContent = 'Hide from Screen';
+      btnActivate.classList.remove('btn-outline');
+      btnActivate.classList.add('btn-live');
+    } else {
+      btnActivate.textContent = 'Set Live';
+      btnActivate.classList.remove('btn-live');
+      btnActivate.classList.add('btn-outline');
+    }
+    btnActivate.disabled = false;
     btnDelete.style.display = 'inline-flex';
   } else {
     btnActivate.style.display = 'none';
@@ -234,8 +242,13 @@ document.getElementById('compSelect').addEventListener('change', (e) => {
 
 document.getElementById('btnActivate').addEventListener('click', async () => {
   if (!selectedCompId) return;
+  const comp = competitions[selectedCompId];
   try {
-    await apiFetch(`/api/competitions/${selectedCompId}/activate`, 'POST');
+    if (comp && comp.active) {
+      await apiFetch(`/api/competitions/${selectedCompId}/deactivate`, 'POST');
+    } else {
+      await apiFetch(`/api/competitions/${selectedCompId}/activate`, 'POST');
+    }
   } catch (err) {
     alert(err.message);
   }

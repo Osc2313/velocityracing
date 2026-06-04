@@ -43,6 +43,8 @@ function render(competitions) {
     tableSection.style.display = 'none';
     compName.textContent = active ? active.name : '—';
     compTrack.textContent = active ? active.trackName : '';
+    document.getElementById('waitingTitle').textContent = active ? 'WAITING FOR COMPETITORS' : 'LEADERBOARD OFFLINE';
+    document.getElementById('waitingSub').textContent = active ? 'Lap times will appear here once entered' : 'No session is currently live';
     prevEntryIds = new Set();
     return;
   }

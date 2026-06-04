@@ -281,6 +281,13 @@ app.post('/api/competitions/:id/activate', (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/competitions/:id/deactivate', (req, res) => {
+  if (!db.competitions[req.params.id]) return res.status(404).json({ error: 'Not found' });
+  db.competitions[req.params.id].active = false;
+  saveDb(); broadcast();
+  res.json({ ok: true });
+});
+
 app.get('/api/competitions/:id/entries', (req, res) => {
   const comp = db.competitions[req.params.id];
   if (!comp) return res.status(404).json({ error: 'Not found' });
