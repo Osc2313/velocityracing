@@ -10,115 +10,173 @@
   <link rel="stylesheet" href="internal.css">
 </head>
 <body>
+
   <!-- Top nav -->
   <nav class="topnav">
     <div class="nav-logo">
       <span class="logo-t">Velocity</span>
       <span class="logo-s">Racing</span>
     </div>
-    <a href="/external" target="_blank" class="btn btn-outline">📺 BIG SCREEN</a>
+    <a href="/external" target="_blank" class="btn btn-outline btn-sm">📺 Screen</a>
   </nav>
 
-  <!-- Competition bar -->
-  <div class="comp-bar">
-    <div class="comp-bar-left">
-      <select id="compSelect" class="comp-select">
-        <option value="">— Select Competition —</option>
-      </select>
-      <button class="btn btn-sm btn-outline" id="btnActivate" style="display:none">Set Live</button>
-    </div>
-    <button class="btn btn-primary" id="btnNewComp">+ NEW</button>
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab active" id="tabLeaderboard" onclick="switchTab('leaderboard')">🏁 Leaderboard</button>
+    <button class="tab" id="tabStaff" onclick="switchTab('staff')">👥 Staff Portal</button>
   </div>
 
-  <!-- Active indicator -->
-  <div class="active-banner" id="activeBanner" style="display:none">
-    <span class="active-dot"></span>
-    <span id="activeBannerText">Competition on big screen</span>
-  </div>
-
-  <!-- Main content -->
-  <div class="content" id="content">
-    <div class="empty-state" id="emptyState">
-      <p>Select or create a competition above to get started.</p>
+  <!-- ===================== LEADERBOARD TAB ===================== -->
+  <div id="panelLeaderboard">
+    <!-- Competition bar -->
+    <div class="comp-bar">
+      <div class="comp-bar-left">
+        <select id="compSelect" class="comp-select">
+          <option value="">— Select Competition —</option>
+        </select>
+        <button class="btn btn-sm btn-outline" id="btnActivate" style="display:none">Set Live</button>
+      </div>
+      <button class="btn btn-primary" id="btnNewComp">+ NEW</button>
     </div>
 
-    <!-- Broadcast message -->
-    <section class="card card-message">
-      <h2 class="section-title">Broadcast Message</h2>
-      <div class="message-row">
-        <input type="text" id="broadcastInput" placeholder="e.g. Next race starting in 5 minutes…" maxlength="120">
-        <button class="btn btn-primary" id="btnSendMessage">Send</button>
-        <button class="btn btn-outline" id="btnClearMessage">Clear</button>
+    <!-- Active indicator -->
+    <div class="active-banner" id="activeBanner" style="display:none">
+      <span class="active-dot"></span>
+      <span id="activeBannerText">Competition on big screen</span>
+    </div>
+
+    <!-- Main content -->
+    <div class="content">
+      <div class="empty-state" id="emptyState">
+        <p>Select or create a competition above to get started.</p>
       </div>
-      <p class="hint" id="messageStatus" style="margin-top:0.4rem"></p>
-    </section>
 
-    <!-- Add time form -->
-    <section class="card" id="addTimeSection" style="display:none">
-      <h2 class="section-title">Add Lap Time</h2>
-      <form id="addTimeForm">
-        <div class="form-row">
-          <label>Lap Time *
-            <div class="laptime-input-row">
-              <input type="text" id="fLapTime" placeholder="1:23.456" autocomplete="off" required>
-              <button type="button" class="btn btn-outline btn-scan" id="btnScanPhoto" title="Scan photo">
-                📷 Scan
-              </button>
-            </div>
-            <span class="hint" id="scanHint">Format: M:SS.mmm or SS.mmm · or scan a photo of the screen</span>
-          </label>
-          <!-- Hidden file input — opens camera on mobile -->
-          <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+      <!-- Broadcast message -->
+      <section class="card card-message">
+        <h2 class="section-title">Broadcast Message</h2>
+        <div class="message-row">
+          <input type="text" id="broadcastInput" placeholder="e.g. Next race starting in 5 minutes…" maxlength="120">
+          <button class="btn btn-primary" id="btnSendMessage">Send</button>
+          <button class="btn btn-outline" id="btnClearMessage">Clear</button>
         </div>
-        <div class="form-row">
-          <label>Driver Name *
-            <input type="text" id="fDriverName" placeholder="John Smith" autocomplete="off" required>
-          </label>
-        </div>
-        <div class="form-row form-row-2">
-          <label>Simulator
-            <select id="fSimulator">
-              <option value="">—</option>
-              <option value="Sim 1">Sim 1</option>
-              <option value="Sim 2">Sim 2</option>
-              <option value="Sim 3">Sim 3</option>
-              <option value="Sim 4">Sim 4</option>
-            </select>
-          </label>
-          <label>Phone
-            <input type="tel" id="fPhone" placeholder="07700 000000">
-          </label>
-        </div>
-        <div class="form-row">
-          <label>Notes
-            <input type="text" id="fNotes" placeholder="Optional notes">
-          </label>
-        </div>
-        <div class="form-error" id="formError" style="display:none"></div>
-        <button type="submit" class="btn btn-primary btn-large">ADD TIME</button>
-      </form>
-    </section>
+        <p class="hint" id="messageStatus" style="margin-top:0.4rem"></p>
+      </section>
 
-    <!-- Entries list -->
-    <section id="entriesSection" style="display:none">
-      <div class="entries-header">
-        <h2 class="section-title">Leaderboard</h2>
-        <span class="entry-count" id="entryCount">0 entries</span>
-      </div>
-      <div id="entriesList"></div>
-    </section>
+      <!-- Add time form -->
+      <section class="card" id="addTimeSection" style="display:none">
+        <h2 class="section-title">Add Lap Time</h2>
+        <form id="addTimeForm">
+          <div class="form-row">
+            <label>Lap Time *
+              <div class="laptime-input-row">
+                <input type="text" id="fLapTime" placeholder="1:23.456" autocomplete="off" required>
+                <button type="button" class="btn btn-outline btn-scan" id="btnScanPhoto">📷 Scan</button>
+              </div>
+              <span class="hint" id="scanHint">Format: M:SS.mmm or SS.mmm · or scan a photo of the screen</span>
+            </label>
+            <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+          </div>
+          <div class="form-row">
+            <label>Driver Name *
+              <input type="text" id="fDriverName" placeholder="John Smith" autocomplete="off" required>
+            </label>
+          </div>
+          <div class="form-row form-row-2">
+            <label>Simulator
+              <select id="fSimulator">
+                <option value="">—</option>
+                <option value="Sim 1">Sim 1</option>
+                <option value="Sim 2">Sim 2</option>
+                <option value="Sim 3">Sim 3</option>
+                <option value="Sim 4">Sim 4</option>
+              </select>
+            </label>
+            <label>Phone
+              <input type="tel" id="fPhone" placeholder="07700 000000">
+            </label>
+          </div>
+          <div class="form-row">
+            <label>Notes
+              <input type="text" id="fNotes" placeholder="Optional notes">
+            </label>
+          </div>
+          <div class="form-error" id="formError" style="display:none"></div>
+          <button type="submit" class="btn btn-primary btn-large">ADD TIME</button>
+        </form>
+      </section>
 
-    <!-- Danger zone -->
-    <section class="card danger-zone" id="dangerZone" style="display:none">
-      <h2 class="section-title danger-title">Danger Zone</h2>
-      <div class="danger-row">
+      <!-- Entries list -->
+      <section id="entriesSection" style="display:none">
+        <div class="entries-header">
+          <h2 class="section-title">Leaderboard</h2>
+          <span class="entry-count" id="entryCount">0 entries</span>
+        </div>
+        <div id="entriesList"></div>
+      </section>
+
+      <!-- Danger zone -->
+      <section class="card danger-zone" id="dangerZone" style="display:none">
+        <h2 class="section-title danger-title">Danger Zone</h2>
+        <div class="danger-row">
+          <div>
+            <div class="danger-label">Delete this competition</div>
+            <div class="danger-desc">Permanently removes the competition and all its lap times. This cannot be undone.</div>
+          </div>
+          <button class="btn btn-danger-solid" id="btnDeleteCompMain">Delete</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===================== STAFF PORTAL TAB ===================== -->
+  <div id="panelStaff" style="display:none">
+
+    <!-- Login screen (shown when no staff member selected) -->
+    <div id="staffLogin" class="content">
+      <p class="staff-login-title">Who are you?</p>
+      <div class="staff-grid" id="staffGrid"></div>
+    </div>
+
+    <!-- Profile view (shown after selecting a name) -->
+    <div id="staffProfile" style="display:none">
+      <div class="profile-header">
+        <div class="profile-avatar" id="profileAvatar"></div>
         <div>
-          <div class="danger-label">Delete this competition</div>
-          <div class="danger-desc">Permanently removes the competition and all its lap times. This cannot be undone.</div>
+          <div class="profile-name" id="profileName"></div>
+          <button class="btn btn-sm btn-outline" id="btnSwitchUser">Switch</button>
         </div>
-        <button class="btn btn-danger-solid" id="btnDeleteCompMain">Delete</button>
       </div>
-    </section>
+
+      <div class="content">
+        <!-- My status -->
+        <section class="card">
+          <h2 class="section-title">My Status</h2>
+          <label>Role / Position tonight
+            <input type="text" id="staffRoleInput" placeholder="e.g. Sim Host, Front Desk…" maxlength="60">
+          </label>
+          <div style="margin-top:0.75rem">
+            <div class="section-title" style="margin-bottom:0.5rem">Status</div>
+            <div class="status-options" id="myStatusOptions"></div>
+          </div>
+        </section>
+
+        <!-- Team overview -->
+        <section class="card">
+          <h2 class="section-title">Team</h2>
+          <div id="teamList"></div>
+        </section>
+
+        <!-- Manage statuses (Oscar only) -->
+        <section class="card" id="manageStatusesCard" style="display:none">
+          <h2 class="section-title">Manage Statuses</h2>
+          <div class="message-row" style="margin-bottom:0.75rem">
+            <input type="text" id="newStatusInput" placeholder="New status option…" maxlength="40">
+            <button class="btn btn-primary" id="btnAddStatus">Add</button>
+          </div>
+          <div id="statusOptionsList"></div>
+        </section>
+      </div>
+    </div>
   </div>
 
   <!-- New Competition Modal -->

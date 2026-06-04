@@ -41,15 +41,26 @@ function openBrowser(url) {
   exec(cmd, (err) => { if (err) console.error('Could not open browser:', err.message); });
 }
 
+const STAFF_NAMES = ['Oscar', 'Greg', 'Myron', 'Riley'];
+const DEFAULT_STATUS_OPTIONS = ['On Break', 'On Checkout', 'On Sim Supervision', 'On Crowd Control', 'On Tours'];
+
 // --- Data store ---
-let db = { competitions: {}, broadcastMessage: '' };
+let db = { competitions: {}, broadcastMessage: '', staff: {}, statusOptions: [] };
+
+function ensureStaffDefaults() {
+  if (!db.staff) db.staff = {};
+  if (!db.statusOptions || db.statusOptions.length === 0) db.statusOptions = [...DEFAULT_STATUS_OPTIONS];
+  for (const name of STAFF_NAMES) {
+    if (!db.staff[name]) db.staff[name] = { role: '', status: '', updatedAt: null };
+  }
+}
 
 async function saveDb() {
   await storage.save(db);
 }
 
 function broadcast() {
-  io.emit('state', { competitions: db.competitions, broadcastMessage: db.broadcastMessage });
+  io.emit('state', { competitions: db.competitions, broadcastMessage: db.broadcastMessage, staff: db.staff, statusOptions: db.statusOptions });
 }
 
 function parselapTime(str) {
@@ -379,6 +390,42 @@ app.post('/api/scan-laptime', upload.single('image'), async (req, res) => {
   }
 });
 
+// --- Staff portal ---
+app.get('/api/staff', (req, res) => {
+  res.json({ staff: db.staff, statusOptions: db.statusOptions });
+});
+
+app.put('/api/staff/:name', (req, res) => {
+  const { name } = req.params;
+  if (!STAFF_NAMES.includes(name)) return res.status(400).json({ error: 'Unknown staff member' });
+  const { role, status } = req.body;
+  if (role !== undefined) db.staff[name].role = role;
+  if (status !== undefined) db.staff[name].status = status;
+  db.staff[name].updatedAt = Date.now();
+  saveDb().then(broadcast);
+  res.json(db.staff[name]);
+});
+
+// Oscar-only: add a new status option
+app.post('/api/staff/status-options', (req, res) => {
+  const { option } = req.body;
+  if (!option || !option.trim()) return res.status(400).json({ error: 'option required' });
+  const trimmed = option.trim();
+  if (!db.statusOptions.includes(trimmed)) {
+    db.statusOptions.push(trimmed);
+    saveDb().then(broadcast);
+  }
+  res.json({ statusOptions: db.statusOptions });
+});
+
+// Oscar-only: remove a status option
+app.delete('/api/staff/status-options/:option', (req, res) => {
+  const opt = decodeURIComponent(req.params.option);
+  db.statusOptions = db.statusOptions.filter(o => o !== opt);
+  saveDb().then(broadcast);
+  res.json({ statusOptions: db.statusOptions });
+});
+
 // --- Broadcast message ---
 app.put('/api/message', (req, res) => {
   const { message } = req.body;
@@ -389,7 +436,7 @@ app.put('/api/message', (req, res) => {
 
 // --- Socket.io ---
 io.on('connection', (socket) => {
-  socket.emit('state', { competitions: db.competitions, broadcastMessage: db.broadcastMessage });
+  socket.emit('state', { competitions: db.competitions, broadcastMessage: db.broadcastMessage, staff: db.staff, statusOptions: db.statusOptions });
 });
 
 // --- Status endpoint (lets admin panel show persistence warning) ---
@@ -400,6 +447,7 @@ app.get('/api/status', (req, res) => {
 // --- Start ---
 storage.load().then(loaded => {
   db = loaded;
+  ensureStaffDefaults();
   server.listen(PORT, '0.0.0.0', () => {
     const launcherUrl = `http://localhost:${PORT}`;
     console.log(`\nVelocity Racing Leaderboard running!`);

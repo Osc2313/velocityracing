@@ -1,8 +1,19 @@
 const socket = io();
 
-
 let competitions = {};
 let selectedCompId = null;
+let staffData = {};
+let statusOptions = [];
+let currentStaff = localStorage.getItem('vr_staff_name') || null;
+
+// ---- Tab switching ----
+function switchTab(tab) {
+  document.getElementById('panelLeaderboard').style.display = tab === 'leaderboard' ? '' : 'none';
+  document.getElementById('panelStaff').style.display = tab === 'staff' ? '' : 'none';
+  document.getElementById('tabLeaderboard').classList.toggle('active', tab === 'leaderboard');
+  document.getElementById('tabStaff').classList.toggle('active', tab === 'staff');
+}
+window.switchTab = switchTab;
 
 // --- Helpers ---
 function msToDisplay(ms) {
@@ -310,10 +321,13 @@ document.getElementById('editModal').addEventListener('click', (e) => {
 // --- Socket.io ---
 socket.on('state', (state) => {
   competitions = state.competitions || state;
+  staffData = state.staff || {};
+  statusOptions = state.statusOptions || [];
   populateCompSelect();
   updateActiveBanner();
   updateCompButtons();
   updateMainView();
+  renderStaffPortal();
 
   // Sync message input only when not focused
   const input = document.getElementById('broadcastInput');
@@ -399,3 +413,146 @@ document.getElementById('btnClearMessage').addEventListener('click', async () =>
 window.toggleEntry = toggleEntry;
 window.openEditModal = openEditModal;
 window.deleteEntry = deleteEntry;
+
+// ============================================================
+// STAFF PORTAL
+// ============================================================
+
+const STAFF_NAMES = ['Oscar', 'Greg', 'Myron', 'Riley'];
+
+function staffInitial(name) { return name[0].toUpperCase(); }
+
+function renderStaffPortal() {
+  if (currentStaff) {
+    renderProfileView();
+  } else {
+    renderLoginView();
+  }
+}
+
+function renderLoginView() {
+  document.getElementById('staffLogin').style.display = '';
+  document.getElementById('staffProfile').style.display = 'none';
+
+  const grid = document.getElementById('staffGrid');
+  grid.innerHTML = STAFF_NAMES.map(name => {
+    const s = staffData[name] || {};
+    const statusText = s.status || 'No status set';
+    return `
+      <div class="staff-card" onclick="selectStaff('${name}')">
+        <div class="staff-card-avatar">${staffInitial(name)}</div>
+        <div class="staff-card-name">${name}</div>
+        <div class="staff-card-status">${escHtml(statusText)}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderProfileView() {
+  document.getElementById('staffLogin').style.display = 'none';
+  document.getElementById('staffProfile').style.display = '';
+
+  const me = staffData[currentStaff] || {};
+
+  // Avatar & name
+  document.getElementById('profileAvatar').textContent = staffInitial(currentStaff);
+  document.getElementById('profileName').textContent = currentStaff;
+
+  // Role input — only update if not focused
+  const roleInput = document.getElementById('staffRoleInput');
+  if (document.activeElement !== roleInput) roleInput.value = me.role || '';
+
+  // Status pills
+  const pillsEl = document.getElementById('myStatusOptions');
+  pillsEl.innerHTML = statusOptions.map(opt => `
+    <div class="status-pill ${me.status === opt ? 'selected' : ''}" onclick="setMyStatus('${escAttr(opt)}')">${escHtml(opt)}</div>
+  `).join('');
+
+  // Team list
+  const teamEl = document.getElementById('teamList');
+  teamEl.innerHTML = STAFF_NAMES.map(name => {
+    const s = staffData[name] || {};
+    const isMe = name === currentStaff;
+    return `
+      <div class="team-member">
+        <div class="team-avatar ${isMe ? 'me' : ''}">${staffInitial(name)}</div>
+        <div class="team-info">
+          <div class="team-name">${name}${isMe ? ' (you)' : ''}</div>
+          ${s.role ? `<div class="team-role">${escHtml(s.role)}</div>` : ''}
+        </div>
+        <div class="team-status ${s.status ? 'has-status' : ''}">${escHtml(s.status || 'No status')}</div>
+      </div>`;
+  }).join('');
+
+  // Oscar-only: manage statuses
+  const manageCard = document.getElementById('manageStatusesCard');
+  manageCard.style.display = currentStaff === 'Oscar' ? 'block' : 'none';
+  if (currentStaff === 'Oscar') renderStatusOptions();
+}
+
+function renderStatusOptions() {
+  const list = document.getElementById('statusOptionsList');
+  list.innerHTML = statusOptions.map(opt => `
+    <div class="status-option-row">
+      <span>${escHtml(opt)}</span>
+      <button class="btn-remove" onclick="removeStatusOption('${escAttr(opt)}')" title="Remove">×</button>
+    </div>
+  `).join('');
+}
+
+function selectStaff(name) {
+  currentStaff = name;
+  localStorage.setItem('vr_staff_name', name);
+  renderProfileView();
+}
+window.selectStaff = selectStaff;
+
+document.getElementById('btnSwitchUser').addEventListener('click', () => {
+  currentStaff = null;
+  localStorage.removeItem('vr_staff_name');
+  renderLoginView();
+});
+
+// Debounced role save
+let roleTimeout;
+document.getElementById('staffRoleInput').addEventListener('input', (e) => {
+  clearTimeout(roleTimeout);
+  roleTimeout = setTimeout(async () => {
+    if (!currentStaff) return;
+    await apiFetch(`/api/staff/${encodeURIComponent(currentStaff)}`, 'PUT', { role: e.target.value });
+  }, 600);
+});
+
+async function setMyStatus(status) {
+  if (!currentStaff) return;
+  const me = staffData[currentStaff] || {};
+  // Toggle off if already selected
+  const newStatus = me.status === status ? '' : status;
+  await apiFetch(`/api/staff/${encodeURIComponent(currentStaff)}`, 'PUT', { status: newStatus });
+}
+window.setMyStatus = setMyStatus;
+
+// Oscar: add status option
+document.getElementById('btnAddStatus').addEventListener('click', async () => {
+  const input = document.getElementById('newStatusInput');
+  const val = input.value.trim();
+  if (!val) return;
+  await apiFetch('/api/staff/status-options', 'POST', { option: val });
+  input.value = '';
+});
+document.getElementById('newStatusInput').addEventListener('keydown', async (e) => {
+  if (e.key !== 'Enter') return;
+  const val = e.target.value.trim();
+  if (!val) return;
+  await apiFetch('/api/staff/status-options', 'POST', { option: val });
+  e.target.value = '';
+});
+
+async function removeStatusOption(opt) {
+  if (!confirm(`Remove "${opt}" from status options?`)) return;
+  await apiFetch(`/api/staff/status-options/${encodeURIComponent(opt)}`, 'DELETE');
+}
+window.removeStatusOption = removeStatusOption;
+
+function escAttr(s) {
+  return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
