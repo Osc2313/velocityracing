@@ -115,7 +115,7 @@ app.get('/', async (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Twilight SimRacing</title>
+  <title>Velocity Racing</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -221,7 +221,7 @@ app.get('/', async (req, res) => {
 </head>
 <body>
   <div class="logo">
-    <div class="logo-main">Twilight <span>SimRacing</span></div>
+    <div class="logo-main">Velocity <span>Racing</span></div>
     <div class="logo-sub">Leaderboard System</div>
   </div>
 
@@ -357,7 +357,7 @@ io.on('connection', (socket) => {
 loadDb();
 server.listen(PORT, '0.0.0.0', () => {
   const launcherUrl = `http://localhost:${PORT}`;
-  console.log(`\nTwilight Leaderboard running!`);
+  console.log(`\nVelocity Racing Leaderboard running!`);
   console.log(`Launcher: ${launcherUrl}`);
   getLocalIPs().forEach(ip => console.log(`Network: http://${ip.address}:${PORT}`));
   // Auto-open launcher in browser

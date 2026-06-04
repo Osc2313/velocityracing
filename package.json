@@ -1,13 +1,13 @@
 {
-  "name": "twilight-leaderboard",
+  "name": "velocity-racing",
   "version": "1.0.0",
-  "description": "Sim racing leaderboard app",
+  "description": "Velocity Racing leaderboard app",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build:win": "pkg . --target node18-win-x64 --output dist/TwilightLeaderboard-Windows.exe --compress GZip",
-    "build:mac": "pkg . --target node18-macos-x64 --output dist/TwilightLeaderboard-Mac --compress GZip",
-    "build:all": "pkg . --targets node18-win-x64,node18-macos-x64,node18-linux-x64 --output dist/TwilightLeaderboard --compress GZip"
+    "build:win": "pkg . --target node18-win-x64 --output dist/VelocityRacing-Windows.exe --compress GZip",
+    "build:mac": "pkg . --target node18-macos-x64 --output dist/VelocityRacing-Mac --compress GZip",
+    "build:all": "pkg . --targets node18-win-x64,node18-macos-x64,node18-linux-x64 --output dist/VelocityRacing --compress GZip"
   },
   "pkg": {
     "assets": [
