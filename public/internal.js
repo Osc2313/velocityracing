@@ -274,7 +274,7 @@ document.getElementById('renameCompForm').addEventListener('submit', async (e) =
   const trackName = document.getElementById('rTrackName').value.trim();
   if (!name || !trackName) return;
   try {
-    await apiFetch(`/api/competitions/${selectedCompId}`, 'PATCH', { name, trackName });
+    await apiFetch(`/api/competitions/${selectedCompId}/rename`, 'POST', { name, trackName });
     document.getElementById('renameCompModal').style.display = 'none';
   } catch (err) {
     alert(err.message);

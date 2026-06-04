@@ -287,7 +287,7 @@ app.post('/api/competitions', (req, res) => {
   res.json(db.competitions[id]);
 });
 
-app.patch('/api/competitions/:id', (req, res) => {
+app.post('/api/competitions/:id/rename', (req, res) => {
   const comp = db.competitions[req.params.id];
   if (!comp) return res.status(404).json({ error: 'Not found' });
   const { name, trackName } = req.body;
