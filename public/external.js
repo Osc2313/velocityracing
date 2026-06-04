@@ -3,8 +3,11 @@ const socket = io();
 // Clock
 function updateClock() {
   const now = new Date();
+  const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const hour = h % 12 || 12;
   document.getElementById('clock').textContent =
-    now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    `${hour}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}${ampm}`;
 }
 setInterval(updateClock, 1000);
 updateClock();
