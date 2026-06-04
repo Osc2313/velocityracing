@@ -60,9 +60,16 @@
       <form id="addTimeForm">
         <div class="form-row">
           <label>Lap Time *
-            <input type="text" id="fLapTime" placeholder="1:23.456" autocomplete="off" required>
-            <span class="hint">Format: M:SS.mmm or SS.mmm</span>
+            <div class="laptime-input-row">
+              <input type="text" id="fLapTime" placeholder="1:23.456" autocomplete="off" required>
+              <button type="button" class="btn btn-outline btn-scan" id="btnScanPhoto" title="Scan photo">
+                📷 Scan
+              </button>
+            </div>
+            <span class="hint" id="scanHint">Format: M:SS.mmm or SS.mmm · or scan a photo of the screen</span>
           </label>
+          <!-- Hidden file input — opens camera on mobile -->
+          <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
         </div>
         <div class="form-row">
           <label>Driver Name *

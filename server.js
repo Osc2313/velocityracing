@@ -7,6 +7,8 @@ const crypto = require('crypto');
 const os = require('os');
 const { exec } = require('child_process');
 const QRCode = require('qrcode');
+const multer = require('multer');
+const { createWorker } = require('tesseract.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -338,6 +340,63 @@ app.delete('/api/competitions/:id/entries/:entryId', (req, res) => {
   sortEntries(comp);
   saveDb(); broadcast();
   res.json({ ok: true });
+});
+
+// --- Lap time OCR ---
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// Extract all lap-time-shaped tokens from raw OCR text.
+// Accepts M:SS.mmm, MM:SS.mmm, SS.mmm — returns best candidate or null.
+function extractLapTime(text) {
+  const lines = text.replace(/[^\x20-\x7E\n]/g, ' ').split('\n');
+  const candidates = [];
+
+  for (const line of lines) {
+    // Try colon-separated format first: 1:23.456 or 01:23.456
+    const colonMatches = line.match(/\b(\d{1,2}):(\d{2})[.,](\d{2,3})\b/g) || [];
+    for (const m of colonMatches) {
+      const norm = m.replace(',', '.');
+      const [minsStr, rest] = norm.split(':');
+      const mins = parseInt(minsStr, 10);
+      const secs = parseFloat(rest);
+      if (mins < 60 && secs < 60) candidates.push({ str: norm, ms: mins * 60000 + Math.round(secs * 1000) });
+    }
+    // Seconds-only: 83.456 or 83,456
+    const secMatches = line.match(/\b(\d{2,3})[.,](\d{2,3})\b/g) || [];
+    for (const m of secMatches) {
+      const norm = m.replace(',', '.');
+      const secs = parseFloat(norm);
+      if (secs >= 1 && secs < 600) candidates.push({ str: norm, ms: Math.round(secs * 1000) });
+    }
+  }
+
+  if (!candidates.length) return null;
+  // Prefer colon-format; otherwise pick shortest (most specific) seconds value
+  const colon = candidates.find(c => c.str.includes(':'));
+  return colon ? colon.str : candidates.sort((a, b) => a.ms - b.ms)[0].str;
+}
+
+const TESSDATA_PATH = path.join(__dirname, 'tessdata');
+
+app.post('/api/scan-laptime', upload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+  let worker;
+  try {
+    worker = await createWorker('eng', 1, {
+      langPath: TESSDATA_PATH,
+      cacheMethod: 'none',
+      logger: () => {},
+    });
+    await worker.setParameters({ tessedit_char_whitelist: '0123456789:.,/ ' });
+    const { data: { text } } = await worker.recognize(req.file.buffer);
+    const lapTime = extractLapTime(text);
+    res.json({ lapTime, rawText: text.trim() });
+  } catch (err) {
+    console.error('OCR error:', err.message);
+    res.status(500).json({ error: 'OCR failed: ' + err.message });
+  } finally {
+    if (worker) await worker.terminate();
+  }
 });
 
 // --- Broadcast message ---

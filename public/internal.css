@@ -197,6 +197,20 @@ select {
   font-size: 0.7rem;
   color: var(--text-faint);
   font-weight: 400;
+  transition: color 0.2s;
+}
+
+.laptime-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.laptime-input-row input { flex: 1; min-width: 0; }
+.btn-scan {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  padding: 0.6rem 0.75rem;
 }
 
 .form-row-2 {

@@ -326,6 +326,50 @@ socket.on('state', (state) => {
   }
 });
 
+// --- Photo scan ---
+document.getElementById('btnScanPhoto').addEventListener('click', () => {
+  document.getElementById('photoInput').click();
+});
+
+document.getElementById('photoInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const btn = document.getElementById('btnScanPhoto');
+  const hint = document.getElementById('scanHint');
+  const lapTimeInput = document.getElementById('fLapTime');
+
+  btn.textContent = '⏳ Reading…';
+  btn.disabled = true;
+  hint.textContent = 'Scanning image…';
+  hint.style.color = 'var(--text-muted)';
+
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch('/api/scan-laptime', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.lapTime) {
+      lapTimeInput.value = data.lapTime;
+      hint.textContent = `✓ Detected: ${data.lapTime} — check and submit`;
+      hint.style.color = '#15803d';
+      lapTimeInput.focus();
+    } else {
+      hint.textContent = `Couldn't detect a lap time — please type it manually`;
+      hint.style.color = 'var(--red)';
+    }
+  } catch (err) {
+    hint.textContent = 'Scan failed — please type the lap time manually';
+    hint.style.color = 'var(--red)';
+  } finally {
+    btn.textContent = '📷 Scan';
+    btn.disabled = false;
+    // Reset file input so same file can be re-scanned
+    e.target.value = '';
+  }
+});
+
 // --- Broadcast message ---
 document.getElementById('btnSendMessage').addEventListener('click', async () => {
   const msg = document.getElementById('broadcastInput').value.trim();
