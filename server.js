@@ -45,7 +45,7 @@ function openBrowser(url) {
 }
 
 // --- Data store ---
-let db = { competitions: {} };
+let db = { competitions: {}, broadcastMessage: '' };
 
 function loadDb() {
   try {
@@ -67,7 +67,7 @@ function saveDb() {
 }
 
 function broadcast() {
-  io.emit('state', db.competitions);
+  io.emit('state', { competitions: db.competitions, broadcastMessage: db.broadcastMessage });
 }
 
 function parselapTime(str) {
@@ -340,8 +340,18 @@ app.delete('/api/competitions/:id/entries/:entryId', (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Broadcast message ---
+app.put('/api/message', (req, res) => {
+  const { message } = req.body;
+  db.broadcastMessage = (message || '').trim();
+  saveDb(); broadcast();
+  res.json({ ok: true });
+});
+
 // --- Socket.io ---
-io.on('connection', (socket) => { socket.emit('state', db.competitions); });
+io.on('connection', (socket) => {
+  socket.emit('state', { competitions: db.competitions, broadcastMessage: db.broadcastMessage });
+});
 
 // --- Start ---
 loadDb();

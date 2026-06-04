@@ -28,7 +28,20 @@ function gapDisplay(leaderMs, ms) {
 let prevEntryIds = new Set();
 let scrollAnimation = null;
 
-function render(competitions) {
+function render(state) {
+  const competitions = state.competitions || state; // backwards compat
+  const broadcastMessage = state.broadcastMessage || '';
+
+  // Message banner
+  const banner = document.getElementById('messageBanner');
+  const msgText = document.getElementById('messageText');
+  if (broadcastMessage) {
+    msgText.textContent = broadcastMessage;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+
   const active = Object.values(competitions).find(c => c.active);
 
   const waiting = document.getElementById('waiting');

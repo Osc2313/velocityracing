@@ -116,6 +116,29 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- MESSAGE BANNER ---- */
+.message-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 2.5rem;
+  background: rgba(37,99,235,0.15);
+  border-bottom: 1px solid rgba(37,99,235,0.3);
+  flex-shrink: 0;
+  animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.message-icon { font-size: 1rem; flex-shrink: 0; }
+.message-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--white);
+  letter-spacing: 0.01em;
+}
+
 /* ---- MAIN ---- */
 .main-content {
   flex: 1;

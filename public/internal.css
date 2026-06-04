@@ -274,6 +274,19 @@ select {
   min-height: 48px;
 }
 
+/* ---- MESSAGE ---- */
+.card-message { border-left: 3px solid var(--blue); }
+.message-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.message-row input {
+  flex: 1;
+  min-width: 0;
+}
+.message-row .btn { flex-shrink: 0; white-space: nowrap; }
+
 /* ---- ENTRIES ---- */
 .entries-header {
   display: flex;

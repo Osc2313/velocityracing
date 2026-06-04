@@ -26,7 +26,7 @@
         <option value="">— Select Competition —</option>
       </select>
       <button class="btn btn-sm btn-outline" id="btnActivate" style="display:none">Set Live</button>
-      <button class="btn btn-sm btn-danger" id="btnDeleteComp" style="display:none">DELETE</button>
+      <button class="btn btn-sm btn-danger" id="btnDeleteComp" style="display:none">Delete</button>
     </div>
     <button class="btn btn-primary" id="btnNewComp">+ NEW</button>
   </div>
@@ -42,6 +42,17 @@
     <div class="empty-state" id="emptyState">
       <p>Select or create a competition above to get started.</p>
     </div>
+
+    <!-- Broadcast message -->
+    <section class="card card-message">
+      <h2 class="section-title">Broadcast Message</h2>
+      <div class="message-row">
+        <input type="text" id="broadcastInput" placeholder="e.g. Next race starting in 5 minutes…" maxlength="120">
+        <button class="btn btn-primary" id="btnSendMessage">Send</button>
+        <button class="btn btn-outline" id="btnClearMessage">Clear</button>
+      </div>
+      <p class="hint" id="messageStatus" style="margin-top:0.4rem"></p>
+    </section>
 
     <!-- Add time form -->
     <section class="card" id="addTimeSection" style="display:none">

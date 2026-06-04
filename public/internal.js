@@ -305,12 +305,47 @@ document.getElementById('editModal').addEventListener('click', (e) => {
 });
 
 // --- Socket.io ---
-socket.on('state', (comps) => {
-  competitions = comps;
+socket.on('state', (state) => {
+  competitions = state.competitions || state;
   populateCompSelect();
   updateActiveBanner();
   updateCompButtons();
   updateMainView();
+
+  // Sync message input only when not focused
+  const input = document.getElementById('broadcastInput');
+  if (document.activeElement !== input) {
+    input.value = state.broadcastMessage || '';
+  }
+  const status = document.getElementById('messageStatus');
+  if (state.broadcastMessage) {
+    status.textContent = `Showing on big screen: "${state.broadcastMessage}"`;
+    status.style.color = '#15803d';
+  } else {
+    status.textContent = '';
+  }
+});
+
+// --- Broadcast message ---
+document.getElementById('btnSendMessage').addEventListener('click', async () => {
+  const msg = document.getElementById('broadcastInput').value.trim();
+  if (!msg) return;
+  try { await apiFetch('/api/message', 'PUT', { message: msg }); } catch (e) { alert(e.message); }
+});
+
+document.getElementById('broadcastInput').addEventListener('keydown', async (e) => {
+  if (e.key === 'Enter') {
+    const msg = e.target.value.trim();
+    if (!msg) return;
+    try { await apiFetch('/api/message', 'PUT', { message: msg }); } catch (err) { alert(err.message); }
+  }
+});
+
+document.getElementById('btnClearMessage').addEventListener('click', async () => {
+  try {
+    await apiFetch('/api/message', 'PUT', { message: '' });
+    document.getElementById('broadcastInput').value = '';
+  } catch (e) { alert(e.message); }
 });
 
 // Make functions available globally (called from onclick in HTML)
