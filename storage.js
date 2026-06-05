@@ -1,6 +1,5 @@
 /**
  * Storage layer — uses Upstash Redis when env vars are set, otherwise a local JSON file.
- * The rest of the app just calls load() and save(db) without knowing which backend is used.
  */
 
 const fs = require('fs');
@@ -15,6 +14,7 @@ const DB_KEY = 'velocity_racing_db';
 const EMPTY_DB = () => ({ competitions: {}, broadcastMessage: '', staff: {}, statusOptions: [], schedule: [] });
 
 // --- Upstash Redis (cloud persistent storage) ---
+// Uses the command-array format which handles large/complex values safely.
 function makeRedis() {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -22,20 +22,15 @@ function makeRedis() {
   return { url, token };
 }
 
-async function redisGet(redis, key) {
-  const res = await fetch(`${redis.url}/get/${key}`, {
-    headers: { Authorization: `Bearer ${redis.token}` },
-  });
-  const json = await res.json();
-  return json.result; // null or string value
-}
-
-async function redisSet(redis, key, value) {
-  await fetch(`${redis.url}/set/${key}`, {
+async function redisCommand(redis, ...args) {
+  const res = await fetch(redis.url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${redis.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value }),
+    body: JSON.stringify(args),
   });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json.result;
 }
 
 // --- File storage (local fallback) ---
@@ -63,7 +58,7 @@ const redis = makeRedis();
 async function load() {
   if (redis) {
     try {
-      const raw = await redisGet(redis, DB_KEY);
+      const raw = await redisCommand(redis, 'GET', DB_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) {
       console.error('Redis load failed, using empty db:', e.message);
@@ -76,7 +71,7 @@ async function load() {
 async function save(db) {
   if (redis) {
     try {
-      await redisSet(redis, DB_KEY, JSON.stringify(db));
+      await redisCommand(redis, 'SET', DB_KEY, JSON.stringify(db));
     } catch (e) {
       console.error('Redis save failed:', e.message);
     }
