@@ -100,20 +100,27 @@ setInterval(checkSchedule, 30000);
 
 function parselapTime(str) {
   if (!str) return null;
-  str = str.trim();
-  let ms = 0;
+  str = str.trim().replace(',', '.');
+
+  // Parse a "SS.mmm" chunk into ms without floating-point errors
+  function secsToMs(s) {
+    const dotIdx = s.indexOf('.');
+    if (dotIdx === -1) return parseInt(s, 10) * 1000;
+    const secs = parseInt(s.slice(0, dotIdx), 10);
+    const milliStr = s.slice(dotIdx + 1).padEnd(3, '0').slice(0, 3);
+    return secs * 1000 + parseInt(milliStr, 10);
+  }
+
   const colonIdx = str.indexOf(':');
   if (colonIdx !== -1) {
     const mins = parseInt(str.slice(0, colonIdx), 10);
-    const rest = parseFloat(str.slice(colonIdx + 1));
-    if (isNaN(mins) || isNaN(rest)) return null;
-    ms = mins * 60000 + Math.round(rest * 1000);
+    if (isNaN(mins)) return null;
+    const ms = mins * 60000 + secsToMs(str.slice(colonIdx + 1));
+    return ms > 0 ? ms : null;
   } else {
-    const secs = parseFloat(str);
-    if (isNaN(secs)) return null;
-    ms = Math.round(secs * 1000);
+    const ms = secsToMs(str);
+    return ms > 0 ? ms : null;
   }
-  return ms > 0 ? ms : null;
 }
 
 function sortEntries(competition) {
