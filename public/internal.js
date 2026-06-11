@@ -470,7 +470,7 @@ function escAttr(s) {
 function populateScheduleCompSelect() {
   const sel = document.getElementById('sCompetition');
   const prev = sel.value;
-  sel.innerHTML = '<option value="">— Select a competition —</option>';
+  sel.innerHTML = '<option value="">— Select —</option>';
   Object.values(competitions)
     .filter(Boolean)
     .sort((a, b) => b.createdAt - a.createdAt)
@@ -483,66 +483,78 @@ function populateScheduleCompSelect() {
   if (prev) sel.value = prev;
 }
 
-function formatScheduleTime(ts) {
+function fmtTime(ts) {
   const d = new Date(ts);
   const h = d.getHours(), m = d.getMinutes();
   const ampm = h >= 12 ? 'pm' : 'am';
   const hour = h % 12 || 12;
-  const time = `${hour}:${String(m).padStart(2, '0')}${ampm}`;
-  const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  return { time, date };
+  return `${hour}:${String(m).padStart(2,'0')}${ampm}`;
+}
+function fmtDate(ts) {
+  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 function renderSchedule() {
-  const list = document.getElementById('scheduleList');
-  const countEl = document.getElementById('scheduleCount');
-  if (!list) return;
+  const body = document.getElementById('timetableBody');
+  if (!body) return;
 
-  const now = Date.now();
   const sorted = [...scheduleItems].sort((a, b) => a.scheduledAt - b.scheduledAt);
-  const upcoming = sorted.filter(s => !s.triggered);
-  const past = sorted.filter(s => s.triggered);
-
-  countEl.textContent = `${upcoming.length} upcoming`;
+  const s1Items = sorted.filter(i => (i.slot || 1) === 1);
+  const s2Items = sorted.filter(i => i.slot === 2);
 
   if (sorted.length === 0) {
-    list.innerHTML = '<p style="color:var(--text-faint);font-size:0.85rem;text-align:center;padding:1.5rem">No sessions scheduled yet.</p>';
+    body.innerHTML = '<p style="color:var(--text-faint);font-size:0.85rem;text-align:center;padding:2rem 1rem">No sessions scheduled yet.</p>';
     return;
   }
 
-  list.innerHTML = sorted.map(item => {
-    const comp = competitions[item.competitionId];
-    const compName = comp ? `${comp.name} — ${comp.trackName}` : 'Deleted competition';
-    const isLive = comp && comp.slot && item.triggered;
-    const { time, date } = formatScheduleTime(item.scheduledAt);
-    const badge = isLive
-      ? '<span class="schedule-badge live">● Live</span>'
-      : item.triggered
-        ? '<span class="schedule-badge done">Done</span>'
-        : '<span class="schedule-badge upcoming">Upcoming</span>';
-    return `
-      <div class="schedule-item ${item.triggered ? 'triggered' : ''}">
-        <div class="schedule-time-block">
-          <div class="schedule-time">${time}</div>
-          <div class="schedule-date">${date}</div>
-        </div>
-        <div class="schedule-info">
-          <div class="schedule-comp">${escHtml(compName)}</div>
-          ${item.label ? `<div class="schedule-label">${escHtml(item.label)}</div>` : ''}
-        </div>
-        ${badge}
-        <button class="btn-remove" onclick="deleteScheduleItem('${item.id}')" title="Remove">×</button>
-      </div>`;
-  }).join('');
+  function renderCol(items) {
+    if (items.length === 0) return '<div class="tt-empty">Nothing scheduled</div>';
+    return items.map(item => {
+      const comp = competitions[item.competitionId];
+      const name = comp ? comp.name : 'Deleted';
+      const track = comp ? comp.trackName : '';
+      const isLive = comp && comp.slot && item.triggered;
+      const badge = isLive ? 'live' : item.triggered ? 'done' : 'upcoming';
+      const badgeLabel = isLive ? '● Live' : item.triggered ? 'Done' : 'Upcoming';
+      return `
+        <div class="tt-item ${item.triggered ? 'triggered' : ''}">
+          <div class="tt-time">${fmtTime(item.scheduledAt)}</div>
+          <div class="tt-date">${fmtDate(item.scheduledAt)}</div>
+          <div class="tt-name">${escHtml(name)}</div>
+          ${track ? `<div class="tt-track">${escHtml(track)}</div>` : ''}
+          ${item.label ? `<div class="tt-label">${escHtml(item.label)}</div>` : ''}
+          <div class="tt-footer">
+            <span class="schedule-badge ${badge}">${badgeLabel}</span>
+            <button class="btn-remove" onclick="deleteScheduleItem('${item.id}')" title="Remove">×</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  body.innerHTML = `
+    <div class="timetable-cols">
+      <div class="timetable-col-items">${renderCol(s1Items)}</div>
+      <div class="timetable-col-items">${renderCol(s2Items)}</div>
+    </div>`;
 }
 
-// Set default datetime to now + 1 hour rounded to nearest 15 min
+// Screen toggle for schedule form
+document.getElementById('sSlot1Btn').addEventListener('click', () => {
+  document.getElementById('sSlot').value = '1';
+  document.getElementById('sSlot1Btn').classList.add('active');
+  document.getElementById('sSlot2Btn').classList.remove('active');
+});
+document.getElementById('sSlot2Btn').addEventListener('click', () => {
+  document.getElementById('sSlot').value = '2';
+  document.getElementById('sSlot2Btn').classList.add('active');
+  document.getElementById('sSlot1Btn').classList.remove('active');
+});
+
 function initDatetimeInput() {
   const input = document.getElementById('sDateTime');
   if (!input || input.value) return;
   const d = new Date(Date.now() + 60 * 60 * 1000);
   d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
-  // datetime-local format: YYYY-MM-DDTHH:MM
   const pad = n => String(n).padStart(2, '0');
   input.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
@@ -554,10 +566,11 @@ document.getElementById('scheduleForm').addEventListener('submit', async (e) => 
   const competitionId = document.getElementById('sCompetition').value;
   const dtVal = document.getElementById('sDateTime').value;
   const label = document.getElementById('sLabel').value.trim();
+  const slot = Number(document.getElementById('sSlot').value);
   if (!competitionId || !dtVal) return;
   const scheduledAt = new Date(dtVal).getTime();
   try {
-    await apiFetch('/api/schedule', 'POST', { competitionId, scheduledAt, label });
+    await apiFetch('/api/schedule', 'POST', { competitionId, scheduledAt, label, slot });
     document.getElementById('sLabel').value = '';
     document.getElementById('sCompetition').value = '';
     initDatetimeInput();
@@ -573,9 +586,8 @@ async function deleteScheduleItem(id) {
 }
 window.deleteScheduleItem = deleteScheduleItem;
 
-// Init datetime when switching to schedule tab
 const origSwitchTab = window.switchTab;
 window.switchTab = function(tab) {
   origSwitchTab(tab);
-  if (tab === 'schedule') initDatetimeInput();
+  if (tab === 'schedule') { populateScheduleCompSelect(); initDatetimeInput(); }
 };

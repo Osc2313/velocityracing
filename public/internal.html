@@ -137,36 +137,47 @@
 
   <!-- ===================== SCHEDULE TAB ===================== -->
   <div id="panelSchedule" style="display:none">
-    <div class="content">
+    <div class="schedule-layout">
 
-      <!-- Add scheduled rotation -->
-      <section class="card">
-        <h2 class="section-title">Add Scheduled Rotation</h2>
-        <form id="scheduleForm">
-          <label>Competition / Session
-            <select id="sCompetition" required>
-              <option value="">— Select a competition —</option>
-            </select>
-          </label>
-          <label>Date &amp; Time
-            <input type="datetime-local" id="sDateTime" required>
-          </label>
-          <label>Label <span style="font-weight:400;text-transform:none">(optional note)</span>
-            <input type="text" id="sLabel" placeholder="e.g. Round 2 starts" maxlength="60">
-          </label>
-          <div class="form-error" id="scheduleError" style="display:none"></div>
-          <button type="submit" class="btn btn-primary btn-large">Add to Schedule</button>
-        </form>
-      </section>
+      <!-- Add form (left / top) -->
+      <div class="schedule-form-col">
+        <section class="card">
+          <h2 class="section-title">Add to Schedule</h2>
+          <form id="scheduleForm">
+            <label>Screen
+              <div class="slot-toggle-row">
+                <button type="button" class="slot-toggle-btn active" id="sSlot1Btn">Screen 1</button>
+                <button type="button" class="slot-toggle-btn" id="sSlot2Btn">Screen 2</button>
+              </div>
+              <input type="hidden" id="sSlot" value="1">
+            </label>
+            <label>Competition
+              <select id="sCompetition" required>
+                <option value="">— Select —</option>
+              </select>
+            </label>
+            <label>Date &amp; Time
+              <input type="datetime-local" id="sDateTime" required>
+            </label>
+            <label>Note <span style="font-weight:400;text-transform:none">(optional)</span>
+              <input type="text" id="sLabel" placeholder="e.g. Round 2 starts" maxlength="60">
+            </label>
+            <div class="form-error" id="scheduleError" style="display:none"></div>
+            <button type="submit" class="btn btn-primary btn-large">Add</button>
+          </form>
+        </section>
+      </div>
 
-      <!-- Upcoming schedule -->
-      <section>
-        <div class="entries-header">
-          <h2 class="section-title">Upcoming</h2>
-          <span class="entry-count" id="scheduleCount"></span>
+      <!-- Timetable (right / bottom) -->
+      <div class="schedule-timetable-col">
+        <div class="timetable-header-row">
+          <div class="timetable-col-head s1">Screen 1</div>
+          <div class="timetable-col-head s2">Screen 2</div>
         </div>
-        <div id="scheduleList"></div>
-      </section>
+        <div class="timetable-body" id="timetableBody">
+          <p style="color:var(--text-faint);font-size:0.85rem;text-align:center;padding:2rem 1rem">No sessions scheduled yet.</p>
+        </div>
+      </div>
 
     </div>
   </div>

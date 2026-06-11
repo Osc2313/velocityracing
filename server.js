@@ -87,8 +87,9 @@ function checkSchedule() {
     if (!item.triggered && item.scheduledAt <= now) {
       const comp = db.competitions[item.competitionId];
       if (comp) {
-        Object.values(db.competitions).filter(Boolean).forEach(c => { if (c.slot === 1) c.slot = null; });
-        comp.slot = 1;
+        const targetSlot = item.slot || 1;
+        Object.values(db.competitions).filter(Boolean).forEach(c => { if (c.slot === targetSlot) c.slot = null; });
+        comp.slot = targetSlot;
         console.log(`[schedule] Auto-activated: ${comp.name} (${new Date(item.scheduledAt).toLocaleTimeString()})`);
       }
       item.triggered = true;
@@ -451,14 +452,14 @@ app.post('/api/scan-laptime', upload.single('image'), async (req, res) => {
 app.get('/api/schedule', (req, res) => res.json(db.schedule));
 
 app.post('/api/schedule', (req, res) => {
-  const { competitionId, scheduledAt, label } = req.body;
+  const { competitionId, scheduledAt, label, slot } = req.body;
   if (!competitionId || !scheduledAt) return res.status(400).json({ error: 'competitionId and scheduledAt required' });
   if (!db.competitions[competitionId]) return res.status(400).json({ error: 'Competition not found' });
-  const item = { id: crypto.randomUUID(), competitionId, scheduledAt: Number(scheduledAt), label: label || '', triggered: Date.now() > Number(scheduledAt) };
-  // If time already passed, activate immediately
+  const targetSlot = slot === 2 ? 2 : 1;
+  const item = { id: crypto.randomUUID(), competitionId, scheduledAt: Number(scheduledAt), label: label || '', slot: targetSlot, triggered: Date.now() > Number(scheduledAt) };
   if (item.triggered) {
-    Object.values(db.competitions).forEach(c => { c.active = false; });
-    db.competitions[competitionId].active = true;
+    Object.values(db.competitions).filter(Boolean).forEach(c => { if (c.slot === targetSlot) c.slot = null; });
+    db.competitions[competitionId].slot = targetSlot;
   }
   db.schedule.push(item);
   db.schedule.sort((a, b) => a.scheduledAt - b.scheduledAt);
