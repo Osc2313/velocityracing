@@ -24,7 +24,6 @@
   <div class="tab-bar">
     <button class="tab active" id="tabLeaderboard" onclick="switchTab('leaderboard')">🏁 Leaderboard</button>
     <button class="tab" id="tabSchedule" onclick="switchTab('schedule')">📅 Schedule</button>
-    <button class="tab" id="tabStaff" onclick="switchTab('staff')">👥 Staff Portal</button>
   </div>
 
   <!-- ===================== LEADERBOARD TAB ===================== -->
@@ -169,57 +168,6 @@
         <div id="scheduleList"></div>
       </section>
 
-    </div>
-  </div>
-
-  <!-- ===================== STAFF PORTAL TAB ===================== -->
-  <div id="panelStaff" style="display:none">
-
-    <!-- Login screen (shown when no staff member selected) -->
-    <div id="staffLogin" class="content">
-      <p class="staff-login-title">Who are you?</p>
-      <div class="staff-grid" id="staffGrid"></div>
-    </div>
-
-    <!-- Profile view (shown after selecting a name) -->
-    <div id="staffProfile" style="display:none">
-      <div class="profile-header">
-        <div class="profile-avatar" id="profileAvatar"></div>
-        <div>
-          <div class="profile-name" id="profileName"></div>
-          <button class="btn btn-sm btn-outline" id="btnSwitchUser">Switch</button>
-        </div>
-      </div>
-
-      <div class="content">
-        <!-- My status -->
-        <section class="card">
-          <h2 class="section-title">My Position</h2>
-          <label>Status
-            <input type="text" id="staffRoleInput" placeholder="e.g. Sim Host, Front Desk…" maxlength="60">
-          </label>
-          <div style="margin-top:0.75rem">
-            <div class="section-title" style="margin-bottom:0.5rem">Role</div>
-            <div class="status-options" id="myStatusOptions"></div>
-          </div>
-        </section>
-
-        <!-- Team overview -->
-        <section class="card">
-          <h2 class="section-title">Team</h2>
-          <div id="teamList"></div>
-        </section>
-
-        <!-- Manage statuses (Oscar only) -->
-        <section class="card" id="manageStatusesCard" style="display:none">
-          <h2 class="section-title">Manage Roles</h2>
-          <div class="message-row" style="margin-bottom:0.75rem">
-            <input type="text" id="newStatusInput" placeholder="New role option…" maxlength="40">
-            <button class="btn btn-primary" id="btnAddStatus">Add</button>
-          </div>
-          <div id="statusOptionsList"></div>
-        </section>
-      </div>
     </div>
   </div>
 
