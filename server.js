@@ -49,11 +49,14 @@ let db = { competitions: {}, broadcastMessage: '', staff: {}, statusOptions: [],
 
 function ensureDefaults() {
   if (!db.competitions || typeof db.competitions !== 'object') db.competitions = {};
-  // Remove any null/corrupt competition entries
   for (const id of Object.keys(db.competitions)) {
     if (!db.competitions[id] || typeof db.competitions[id] !== 'object') {
-      delete db.competitions[id];
+      delete db.competitions[id]; continue;
     }
+    const c = db.competitions[id];
+    // Migrate legacy active:bool → slot
+    if (!('slot' in c)) { c.slot = c.active ? 1 : null; }
+    delete c.active;
   }
   if (!db.staff) db.staff = {};
   if (!db.statusOptions || db.statusOptions.length === 0) db.statusOptions = [...DEFAULT_STATUS_OPTIONS];
@@ -86,8 +89,8 @@ function checkSchedule() {
     if (!item.triggered && item.scheduledAt <= now) {
       const comp = db.competitions[item.competitionId];
       if (comp) {
-        Object.values(db.competitions).forEach(c => { c.active = false; });
-        comp.active = true;
+        Object.values(db.competitions).filter(Boolean).forEach(c => { if (c.slot === 1) c.slot = null; });
+        comp.slot = 1;
         console.log(`[schedule] Auto-activated: ${comp.name} (${new Date(item.scheduledAt).toLocaleTimeString()})`);
       }
       item.triggered = true;
@@ -308,17 +311,31 @@ app.delete('/api/competitions/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/competitions/:id/setslot', (req, res) => {
+  const comp = db.competitions[req.params.id];
+  if (!comp) return res.status(404).json({ error: 'Not found' });
+  const slot = req.body.slot === 1 ? 1 : req.body.slot === 2 ? 2 : null;
+  if (slot !== null) {
+    Object.values(db.competitions).filter(Boolean).forEach(c => { if (c.id !== comp.id && c.slot === slot) c.slot = null; });
+  }
+  comp.slot = slot;
+  saveDb().then(broadcast);
+  res.json({ ok: true });
+});
+
 app.post('/api/competitions/:id/activate', (req, res) => {
-  if (!db.competitions[req.params.id]) return res.status(404).json({ error: 'Not found' });
-  Object.values(db.competitions).forEach(c => { c.active = false; });
-  db.competitions[req.params.id].active = true;
+  const comp = db.competitions[req.params.id];
+  if (!comp) return res.status(404).json({ error: 'Not found' });
+  Object.values(db.competitions).filter(Boolean).forEach(c => { if (c.slot === 1) c.slot = null; });
+  comp.slot = 1;
   saveDb().then(broadcast);
   res.json({ ok: true });
 });
 
 app.post('/api/competitions/:id/deactivate', (req, res) => {
-  if (!db.competitions[req.params.id]) return res.status(404).json({ error: 'Not found' });
-  db.competitions[req.params.id].active = false;
+  const comp = db.competitions[req.params.id];
+  if (!comp) return res.status(404).json({ error: 'Not found' });
+  if (comp.slot === 1) comp.slot = null;
   saveDb().then(broadcast);
   res.json({ ok: true });
 });

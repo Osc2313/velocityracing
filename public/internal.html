@@ -35,9 +35,16 @@
         <select id="compSelect" class="comp-select">
           <option value="">— Select Competition —</option>
         </select>
-        <button class="btn btn-sm btn-outline" id="btnActivate" style="display:none">Set Live</button>
+        <button class="btn btn-sm btn-outline" id="btnSlot1" style="display:none">Screen 1</button>
+        <button class="btn btn-sm btn-outline" id="btnSlot2" style="display:none">Screen 2</button>
       </div>
       <button class="btn btn-primary" id="btnNewComp">+ NEW</button>
+    </div>
+
+    <!-- Quick-switch bar: shows active screen chips -->
+    <div class="slot-bar" id="slotBar" style="display:none">
+      <button class="slot-chip" id="slotChip1">S1: —</button>
+      <button class="slot-chip" id="slotChip2">S2: —</button>
     </div>
 
     <!-- Active indicator -->

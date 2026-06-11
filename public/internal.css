@@ -120,6 +120,46 @@ html, body {
 }
 .comp-select:focus { outline: none; border-color: var(--border-focus); }
 
+/* ---- SLOT BUTTONS ---- */
+.btn-slot-active {
+  background: var(--blue-light);
+  color: var(--blue);
+  border: 1.5px solid var(--blue);
+  font-weight: 600;
+}
+.btn-slot-active:hover { background: #dbeafe; }
+
+/* ---- SLOT BAR ---- */
+.slot-bar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.slot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg2);
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+.slot-chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.slot-chip.filled { border-color: var(--green-border); color: #15803d; background: var(--green-bg); }
+.slot-chip.selected { border-color: var(--blue); color: var(--blue); background: var(--blue-light); font-weight: 600; }
+
 /* ---- ACTIVE BANNER ---- */
 .active-banner {
   display: flex;

@@ -63,7 +63,8 @@ function populateCompSelect() {
     .forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
-      opt.textContent = `${c.name} — ${c.trackName}${c.active ? ' 🟢' : ''}`;
+      const slotTag = c.slot === 1 ? ' · S1' : c.slot === 2 ? ' · S2' : '';
+      opt.textContent = `${c.name} — ${c.trackName}${slotTag}`;
       sel.appendChild(opt);
     });
   // Restore selection or keep current
@@ -76,36 +77,65 @@ function populateCompSelect() {
 }
 
 function updateActiveBanner() {
-  const active = Object.values(competitions).filter(Boolean).find(c => c.active);
+  const all = Object.values(competitions).filter(Boolean);
+  const s1 = all.find(c => c.slot === 1);
+  const s2 = all.find(c => c.slot === 2);
   const banner = document.getElementById('activeBanner');
-  if (active) {
+  if (s1 || s2) {
     banner.style.display = 'flex';
-    document.getElementById('activeBannerText').textContent =
-      `On big screen: ${active.name} — ${active.trackName}`;
+    const parts = [];
+    if (s1) parts.push(`S1: ${s1.name}`);
+    if (s2) parts.push(`S2: ${s2.name}`);
+    document.getElementById('activeBannerText').textContent = `On big screen: ${parts.join(' · ')}`;
   } else {
     banner.style.display = 'none';
   }
 }
 
+function updateSlotBar() {
+  const all = Object.values(competitions).filter(Boolean);
+  const s1 = all.find(c => c.slot === 1);
+  const s2 = all.find(c => c.slot === 2);
+  const bar = document.getElementById('slotBar');
+  const chip1 = document.getElementById('slotChip1');
+  const chip2 = document.getElementById('slotChip2');
+  if (s1 || s2) {
+    bar.style.display = 'flex';
+    chip1.textContent = s1 ? `S1: ${s1.name}` : 'S1: empty';
+    chip1.className = 'slot-chip' + (s1 ? ' filled' : '') + (s1?.id === selectedCompId ? ' selected' : '');
+    chip2.textContent = s2 ? `S2: ${s2.name}` : 'S2: empty';
+    chip2.className = 'slot-chip' + (s2 ? ' filled' : '') + (s2?.id === selectedCompId ? ' selected' : '');
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
 function updateCompButtons() {
   const comp = selectedCompId ? competitions[selectedCompId] : null;
-  const btnActivate = document.getElementById('btnActivate');
+  const btnSlot1 = document.getElementById('btnSlot1');
+  const btnSlot2 = document.getElementById('btnSlot2');
   const dangerZone = document.getElementById('dangerZone');
   if (comp) {
-    btnActivate.style.display = 'inline-flex';
-    if (comp.active) {
-      btnActivate.textContent = 'Hide from Screen';
-      btnActivate.classList.remove('btn-outline');
-      btnActivate.classList.add('btn-live');
+    btnSlot1.style.display = 'inline-flex';
+    btnSlot2.style.display = 'inline-flex';
+    if (comp.slot === 1) {
+      btnSlot1.textContent = '● S1';
+      btnSlot1.className = 'btn btn-sm btn-slot-active';
     } else {
-      btnActivate.textContent = 'Set Live';
-      btnActivate.classList.remove('btn-live');
-      btnActivate.classList.add('btn-outline');
+      btnSlot1.textContent = 'Screen 1';
+      btnSlot1.className = 'btn btn-sm btn-outline';
     }
-    btnActivate.disabled = false;
+    if (comp.slot === 2) {
+      btnSlot2.textContent = '● S2';
+      btnSlot2.className = 'btn btn-sm btn-slot-active';
+    } else {
+      btnSlot2.textContent = 'Screen 2';
+      btnSlot2.className = 'btn btn-sm btn-outline';
+    }
     dangerZone.style.display = 'block';
   } else {
-    btnActivate.style.display = 'none';
+    btnSlot1.style.display = 'none';
+    btnSlot2.style.display = 'none';
     dangerZone.style.display = 'none';
   }
 }
@@ -273,18 +303,29 @@ document.getElementById('compSelect').addEventListener('change', (e) => {
   updateMainView();
 });
 
-document.getElementById('btnActivate').addEventListener('click', async () => {
+document.getElementById('btnSlot1').addEventListener('click', async () => {
   if (!selectedCompId) return;
   const comp = competitions[selectedCompId];
-  try {
-    if (comp && comp.active) {
-      await apiFetch(`/api/competitions/${selectedCompId}/deactivate`, 'POST');
-    } else {
-      await apiFetch(`/api/competitions/${selectedCompId}/activate`, 'POST');
-    }
-  } catch (err) {
-    alert(err.message);
-  }
+  const newSlot = comp?.slot === 1 ? null : 1;
+  try { await apiFetch(`/api/competitions/${selectedCompId}/setslot`, 'POST', { slot: newSlot }); }
+  catch (err) { alert(err.message); }
+});
+
+document.getElementById('btnSlot2').addEventListener('click', async () => {
+  if (!selectedCompId) return;
+  const comp = competitions[selectedCompId];
+  const newSlot = comp?.slot === 2 ? null : 2;
+  try { await apiFetch(`/api/competitions/${selectedCompId}/setslot`, 'POST', { slot: newSlot }); }
+  catch (err) { alert(err.message); }
+});
+
+document.getElementById('slotChip1').addEventListener('click', () => {
+  const comp = Object.values(competitions).filter(Boolean).find(c => c.slot === 1);
+  if (comp) { selectedCompId = comp.id; document.getElementById('compSelect').value = comp.id; updateCompButtons(); updateMainView(); updateSlotBar(); }
+});
+document.getElementById('slotChip2').addEventListener('click', () => {
+  const comp = Object.values(competitions).filter(Boolean).find(c => c.slot === 2);
+  if (comp) { selectedCompId = comp.id; document.getElementById('compSelect').value = comp.id; updateCompButtons(); updateMainView(); updateSlotBar(); }
 });
 
 // --- New competition modal ---
@@ -333,6 +374,7 @@ socket.on('state', (state) => {
   scheduleItems = state.schedule || [];
   populateCompSelect();
   updateActiveBanner();
+  updateSlotBar();
   updateCompButtons();
   updateMainView();
   renderStaffPortal();
