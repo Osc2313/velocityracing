@@ -6,7 +6,7 @@ let scheduleItems = [];
 
 // ---- Tab switching ----
 function switchTab(tab) {
-  ['leaderboard', 'schedule'].forEach(t => {
+  ['leaderboard', 'schedule', 'timers'].forEach(t => {
     document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = t === tab ? '' : 'none';
     document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
   });
@@ -590,4 +590,151 @@ const origSwitchTab = window.switchTab;
 window.switchTab = function(tab) {
   origSwitchTab(tab);
   if (tab === 'schedule') { populateScheduleCompSelect(); initDatetimeInput(); }
+  if (tab === 'timers') renderTimers();
 };
+
+// ============================================================
+// SIM TIMERS
+// ============================================================
+
+const SIM_NAMES = ['Sim 1', 'Sim 2', 'Sim 3', 'Sim 4'];
+const SIM_IDS   = ['Sim1',  'Sim2',  'Sim3',  'Sim4'];
+
+const simStates = {};
+SIM_NAMES.forEach((sim, i) => {
+  simStates[sim] = { phase: 'idle', remaining: 0, total: 0, interval: null };
+});
+
+function renderTimers() {
+  SIM_NAMES.forEach(renderTimerCard);
+}
+
+function renderTimerCard(sim) {
+  const id = sim.replace(' ', '');
+  const card = document.getElementById('timer-' + id);
+  if (!card) return;
+  const s = simStates[sim];
+
+  const mins = Math.floor(s.remaining / 60);
+  const secs = s.remaining % 60;
+  const display = s.remaining > 0
+    ? `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`
+    : '00:00';
+
+  let html = `<div class="timer-sim-name">${sim}</div>`;
+
+  if (s.phase === 'idle') {
+    html += `
+      <div class="timer-display timer-idle">—:——</div>
+      <p class="timer-hint">Tap to start a turn</p>
+      <div class="timer-start-btns">
+        <button class="btn btn-outline btn-sm" onclick="startTimer('${sim}',3)">3 min</button>
+        <button class="btn btn-outline btn-sm" onclick="startTimer('${sim}',4)">4 min</button>
+        <button class="btn btn-outline btn-sm" onclick="startTimer('${sim}',5)">5 min</button>
+      </div>`;
+
+  } else if (s.phase === 'running') {
+    const pct = s.remaining / s.total;
+    const cls = pct < 0.2 ? 'urgent' : pct < 0.4 ? 'warning' : 'ok';
+    html += `
+      <div class="timer-display timer-${cls}">${display}</div>
+      <div class="timer-progress"><div class="timer-bar timer-bar-${cls}" style="width:${(pct*100).toFixed(1)}%"></div></div>
+      <button class="btn btn-outline btn-sm" style="margin-top:0.6rem" onclick="stopTimer('${sim}')">■ Stop</button>`;
+
+  } else if (s.phase === 'finished') {
+    html += `
+      <div class="timer-display timer-urgent">00:00</div>
+      <div class="timer-finished-label">⏰ Time's up!</div>
+      <div class="timer-log-form">
+        <label class="timer-field-label">Driver Name
+          <input class="timer-input" id="logDriver-${id}" type="text" placeholder="John Smith" autocomplete="off">
+        </label>
+        <label class="timer-field-label">Lap Time
+          <input class="timer-input" id="logTime-${id}" type="text" placeholder="1:23.456" autocomplete="off">
+        </label>
+        <div class="timer-log-actions">
+          <button class="btn btn-primary btn-sm" onclick="logLapTime('${sim}')">Log Lap Time</button>
+          <button class="btn btn-outline btn-sm" onclick="resetTimer('${sim}')">New Timer</button>
+        </div>
+      </div>`;
+  }
+
+  card.innerHTML = html;
+
+  // Auto-focus driver name field when finished
+  if (s.phase === 'finished') {
+    const inp = document.getElementById('logDriver-' + id);
+    if (inp) setTimeout(() => inp.focus(), 50);
+  }
+}
+
+function startTimer(sim, minutes) {
+  const s = simStates[sim];
+  if (s.interval) clearInterval(s.interval);
+  s.total = minutes * 60;
+  s.remaining = s.total;
+  s.phase = 'running';
+  renderTimerCard(sim);
+  s.interval = setInterval(() => {
+    s.remaining--;
+    if (s.remaining <= 0) {
+      s.remaining = 0;
+      s.phase = 'finished';
+      clearInterval(s.interval);
+      s.interval = null;
+      if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+    }
+    renderTimerCard(sim);
+  }, 1000);
+}
+window.startTimer = startTimer;
+
+function stopTimer(sim) {
+  const s = simStates[sim];
+  if (s.interval) { clearInterval(s.interval); s.interval = null; }
+  s.phase = 'idle';
+  renderTimerCard(sim);
+}
+window.stopTimer = stopTimer;
+
+function resetTimer(sim) {
+  const s = simStates[sim];
+  if (s.interval) { clearInterval(s.interval); s.interval = null; }
+  s.phase = 'idle';
+  s.remaining = 0;
+  s.total = 0;
+  renderTimerCard(sim);
+}
+window.resetTimer = resetTimer;
+
+async function logLapTime(sim) {
+  if (!selectedCompId) {
+    alert('Select a competition on the Leaderboard tab first.');
+    return;
+  }
+  const id = sim.replace(' ', '');
+  const driverName = document.getElementById('logDriver-' + id)?.value.trim();
+  const lapTime    = document.getElementById('logTime-'   + id)?.value.trim();
+  if (!driverName || !lapTime) {
+    alert('Enter both the driver name and lap time.');
+    return;
+  }
+  try {
+    await apiFetch(`/api/competitions/${selectedCompId}/entries`, 'POST', {
+      lapTime, driverName, simulator: sim,
+    });
+    resetTimer(sim);
+    // Brief success flash on the card
+    const card = document.getElementById('timer-' + id);
+    if (card) {
+      const msg = document.createElement('div');
+      msg.className = 'timer-success';
+      msg.textContent = `✓ ${driverName} logged`;
+      card.appendChild(msg);
+      setTimeout(() => msg.remove(), 2500);
+    }
+  } catch (err) {
+    alert('Could not log lap time: ' + err.message);
+  }
+}
+window.logLapTime = logLapTime;

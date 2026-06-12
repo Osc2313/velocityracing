@@ -24,6 +24,7 @@
   <div class="tab-bar">
     <button class="tab active" id="tabLeaderboard" onclick="switchTab('leaderboard')">🏁 Leaderboard</button>
     <button class="tab" id="tabSchedule" onclick="switchTab('schedule')">📅 Schedule</button>
+    <button class="tab" id="tabTimers" onclick="switchTab('timers')">⏱ Timers</button>
   </div>
 
   <!-- ===================== LEADERBOARD TAB ===================== -->
@@ -179,6 +180,18 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ===================== TIMERS TAB ===================== -->
+  <div id="panelTimers" style="display:none">
+    <div class="content">
+      <div class="timers-grid">
+        <div class="timer-card" id="timer-Sim1"></div>
+        <div class="timer-card" id="timer-Sim2"></div>
+        <div class="timer-card" id="timer-Sim3"></div>
+        <div class="timer-card" id="timer-Sim4"></div>
+      </div>
     </div>
   </div>
 
