@@ -3,10 +3,12 @@ const socket = io();
 let competitions = {};
 let selectedCompId = null;
 let scheduleItems = [];
+let feedEvents = [];
+let feedFilter = 'all';
 
 // ---- Tab switching ----
 function switchTab(tab) {
-  ['leaderboard', 'schedule', 'timers'].forEach(t => {
+  ['leaderboard', 'schedule', 'timers', 'feed'].forEach(t => {
     document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = t === tab ? '' : 'none';
     document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
   });
@@ -367,12 +369,14 @@ document.getElementById('editModal').addEventListener('click', (e) => {
 socket.on('state', (state) => {
   competitions = state.competitions || state;
   scheduleItems = state.schedule || [];
+  feedEvents = state.feed || [];
   populateCompSelect();
   updateActiveBanner();
   updateSlotBar();
   updateCompButtons();
   updateMainView();
   renderSchedule();
+  renderFeed();
 
   // Sync message input only when not focused
   const input = document.getElementById('broadcastInput');
@@ -594,6 +598,115 @@ window.switchTab = function(tab) {
 };
 
 // ============================================================
+// FEED
+// ============================================================
+
+function relTime(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function absTime(ts) {
+  const d = new Date(ts);
+  const h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  return `${h % 12 || 12}:${String(m).padStart(2,'0')}${ampm}`;
+}
+
+const FEED_META = {
+  session_created: { icon: '🏁', dot: 'dot-blue',   label: 'Session Created' },
+  session_live:    { icon: '🟢', dot: 'dot-green',  label: 'Went Live' },
+  session_hidden:  { icon: '⚫', dot: 'dot-grey',   label: 'Removed from Screen' },
+  entry_added:     { icon: '⏱', dot: 'dot-blue',   label: 'Lap Time' },
+  entry_deleted:   { icon: '🗑', dot: 'dot-red',    label: 'Entry Deleted' },
+};
+
+function renderFeed() {
+  const list = document.getElementById('feedList');
+  const countEl = document.getElementById('feedCount');
+  if (!list) return;
+
+  const isEntryType = t => t === 'entry_added' || t === 'entry_deleted';
+  const isSessionType = t => !isEntryType(t);
+
+  const filtered = feedEvents.filter(e => {
+    if (feedFilter === 'entries') return isEntryType(e.type);
+    if (feedFilter === 'sessions') return isSessionType(e.type);
+    return true;
+  });
+
+  countEl.textContent = `${filtered.length} event${filtered.length !== 1 ? 's' : ''}`;
+
+  if (!filtered.length) {
+    list.innerHTML = '<p class="feed-empty">No events yet.</p>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(e => {
+    const meta = FEED_META[e.type] || { icon: '•', dot: 'dot-grey', label: e.type };
+    let headline = '', detail = '';
+
+    if (e.type === 'entry_added') {
+      // look up current position
+      const comp = competitions[e.competitionId];
+      const entry = comp?.entries?.find(x => x.id === e.entryId);
+      const pos = entry ? `P${entry.position}` : '';
+      headline = `<span class="feed-driver">${escHtml(e.driverName)}</span> &mdash; <span class="feed-time">${escHtml(e.lapTime)}</span>${pos ? ` <span class="feed-pos">${pos}</span>` : ''}`;
+      detail = `
+        <div class="feed-detail-row"><span>Session</span><span>${escHtml(e.competitionName)} — ${escHtml(e.trackName)}</span></div>
+        ${e.simulator ? `<div class="feed-detail-row"><span>Simulator</span><span>${escHtml(e.simulator)}</span></div>` : ''}
+        ${e.notes ? `<div class="feed-detail-row"><span>Notes</span><span>${escHtml(e.notes)}</span></div>` : ''}`;
+
+    } else if (e.type === 'entry_deleted') {
+      headline = `<span class="feed-driver">${escHtml(e.driverName)}</span> — ${escHtml(e.lapTime)} deleted`;
+      detail = `<div class="feed-detail-row"><span>Session</span><span>${escHtml(e.competitionName)}</span></div>`;
+
+    } else if (e.type === 'session_created') {
+      headline = `<span class="feed-session">${escHtml(e.competitionName)}</span>`;
+      detail = `<div class="feed-detail-row"><span>Track</span><span>${escHtml(e.trackName)}</span></div>`;
+
+    } else if (e.type === 'session_live') {
+      headline = `<span class="feed-session">${escHtml(e.competitionName)}</span> on Screen ${e.slot}`;
+      detail = `<div class="feed-detail-row"><span>Track</span><span>${escHtml(e.trackName)}</span></div>`;
+
+    } else if (e.type === 'session_hidden') {
+      headline = `<span class="feed-session">${escHtml(e.competitionName)}</span> removed from screen`;
+    }
+
+    return `
+      <div class="feed-item" onclick="this.classList.toggle('expanded')">
+        <div class="feed-dot ${meta.dot}"></div>
+        <div class="feed-card">
+          <div class="feed-card-top">
+            <span class="feed-icon">${meta.icon}</span>
+            <span class="feed-label">${meta.label}</span>
+            <span class="feed-ts" title="${new Date(e.at).toLocaleString()}">${absTime(e.at)} · ${relTime(e.at)}</span>
+          </div>
+          <div class="feed-headline">${headline}</div>
+          ${detail ? `<div class="feed-detail">${detail}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Filter buttons
+['All', 'Entries', 'Sessions'].forEach(name => {
+  const btn = document.getElementById(`feedFilter${name}`);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    feedFilter = name.toLowerCase();
+    document.querySelectorAll('.feed-toolbar .btn').forEach(b => b.classList.remove('btn-primary'));
+    document.querySelectorAll('.feed-toolbar .btn').forEach(b => b.classList.add('btn-outline'));
+    btn.classList.remove('btn-outline');
+    btn.classList.add('btn-primary');
+    renderFeed();
+  });
+});
+
+// ============================================================
 // SIM TIMERS
 // ============================================================
 
@@ -661,13 +774,38 @@ function renderTimerCard(sim) {
       <button class="btn btn-outline btn-sm" style="margin-top:0.6rem" onclick="stopTimer('${sim}')">■ Stop</button>`;
 
   } else if (s.phase === 'finished') {
+    const all = Object.values(competitions).filter(Boolean);
+    const s1 = all.find(c => c.slot === 1);
+    const s2 = all.find(c => c.slot === 2);
+    const pills = [s1 && { id: s1.id, label: `S1: ${s1.name}` }, s2 && { id: s2.id, label: `S2: ${s2.name}` }]
+      .filter(Boolean)
+      .map(p => `<button class="session-pill session-pill-sm" data-id="${p.id}" onclick="pickTimerSessionInline('${id}','${p.id}')">${escHtml(p.label)}</button>`)
+      .join('');
+    const opts = all.sort((a,b) => b.createdAt - a.createdAt)
+      .map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    const autoId = s1 && !s2 ? s1.id : s2 && !s1 ? s2.id : selectedCompId || '';
     html += `
       <div class="timer-display timer-urgent">00:00</div>
       <div class="timer-finished-label">⏰ Time's up!</div>
-      <div class="timer-log-actions" style="margin-top:0.5rem">
-        <button class="btn btn-primary btn-sm" onclick="openTimerLogModal('${sim}')">Log Lap Time</button>
-        <button class="btn btn-outline btn-sm" onclick="resetTimer('${sim}')">Skip</button>
+      <div class="timer-inline-form">
+        ${pills ? `<div class="timer-pills">${pills}</div>` : ''}
+        <select class="timer-input" id="tiInlineComp-${id}" onchange="syncTimerPills('${id}')">
+          <option value="">— Session —</option>${opts}
+        </select>
+        <input class="timer-input" id="tiDriver-${id}" type="text" placeholder="Driver name" autocomplete="off">
+        <input class="timer-input" id="tiLapTime-${id}" type="text" placeholder="1:23.456" autocomplete="off">
+        <input class="timer-input" id="tiPhone-${id}" type="tel" placeholder="Phone (optional)">
+        <div class="form-error" id="tiError-${id}" style="display:none;font-size:0.72rem"></div>
+        <div class="timer-log-actions">
+          <button class="btn btn-primary btn-sm" onclick="submitTimerInline('${sim}')">Log</button>
+          <button class="btn btn-outline btn-sm" onclick="resetTimer('${sim}')">Skip</button>
+        </div>
       </div>`;
+    // auto-select session after render
+    if (autoId) setTimeout(() => {
+      const sel = document.getElementById(`tiInlineComp-${id}`);
+      if (sel) { sel.value = autoId; syncTimerPills(id); }
+    }, 30);
   }
 
   card.innerHTML = html;
@@ -689,7 +827,6 @@ function startTimer(sim, minutes) {
       clearInterval(s.interval);
       s.interval = null;
       if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
-      setTimeout(() => openTimerLogModal(sim), 300);
     }
     renderTimerCard(sim);
   }, 1000);
@@ -713,6 +850,43 @@ function resetTimer(sim) {
   renderTimerCard(sim); // also calls updateTimerTopbar
 }
 window.resetTimer = resetTimer;
+
+function pickTimerSessionInline(cardId, compId) {
+  const sel = document.getElementById(`tiInlineComp-${cardId}`);
+  if (sel) sel.value = compId;
+  syncTimerPills(cardId);
+}
+window.pickTimerSessionInline = pickTimerSessionInline;
+
+function syncTimerPills(cardId) {
+  const sel = document.getElementById(`tiInlineComp-${cardId}`);
+  if (!sel) return;
+  document.querySelectorAll(`#timer-${cardId} .session-pill-sm`).forEach(p => {
+    p.classList.toggle('active', p.dataset.id === sel.value);
+  });
+}
+window.syncTimerPills = syncTimerPills;
+
+async function submitTimerInline(sim) {
+  const id = sim.replace(' ', '');
+  const compId = document.getElementById(`tiInlineComp-${id}`)?.value;
+  const driverName = document.getElementById(`tiDriver-${id}`)?.value.trim();
+  const lapTime = document.getElementById(`tiLapTime-${id}`)?.value.trim();
+  const phone = document.getElementById(`tiPhone-${id}`)?.value.trim();
+  const errEl = document.getElementById(`tiError-${id}`);
+  errEl.style.display = 'none';
+  if (!compId) { errEl.textContent = 'Select a session.'; errEl.style.display = 'block'; return; }
+  if (!driverName) { errEl.textContent = 'Enter driver name.'; errEl.style.display = 'block'; return; }
+  if (!lapTime) { errEl.textContent = 'Enter lap time.'; errEl.style.display = 'block'; return; }
+  try {
+    await apiFetch(`/api/competitions/${compId}/entries`, 'POST', { lapTime, driverName, simulator: sim, phone });
+    resetTimer(sim);
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+}
+window.submitTimerInline = submitTimerInline;
 
 function openTimerLogModal(sim) {
   const all = Object.values(competitions).filter(Boolean);

@@ -11,7 +11,7 @@ const DATA_DIR = process.pkg
 const DB_PATH = path.join(DATA_DIR, 'db.json');
 const DB_KEY = 'velocity_racing_db';
 
-const EMPTY_DB = () => ({ competitions: {}, broadcastMessage: '', staff: {}, statusOptions: [], schedule: [] });
+const EMPTY_DB = () => ({ competitions: {}, broadcastMessage: '', schedule: [], migrations: {}, feed: [] });
 
 // --- Upstash Redis (cloud persistent storage) ---
 // Uses the command-array format which handles large/complex values safely.

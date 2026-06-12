@@ -26,6 +26,7 @@
     <button class="tab active" id="tabLeaderboard" onclick="switchTab('leaderboard')">🏁 Leaderboard</button>
     <button class="tab" id="tabSchedule" onclick="switchTab('schedule')">📅 Schedule</button>
     <button class="tab" id="tabTimers" onclick="switchTab('timers')">⏱ Timers</button>
+    <button class="tab" id="tabFeed" onclick="switchTab('feed')">📋 Feed</button>
   </div>
 
   <!-- ===================== LEADERBOARD TAB ===================== -->
@@ -194,6 +195,17 @@
         <div class="timer-card" id="timer-Sim4"></div>
       </div>
     </div>
+  </div>
+
+  <!-- ===================== FEED TAB ===================== -->
+  <div id="panelFeed" style="display:none">
+    <div class="feed-toolbar">
+      <span class="feed-count" id="feedCount"></span>
+      <button class="btn btn-outline btn-sm" id="feedFilterAll">All</button>
+      <button class="btn btn-outline btn-sm" id="feedFilterEntries">Times only</button>
+      <button class="btn btn-outline btn-sm" id="feedFilterSessions">Sessions only</button>
+    </div>
+    <div class="feed-list" id="feedList"></div>
   </div>
 
   <!-- Timer Lap Time Modal -->

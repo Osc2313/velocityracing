@@ -42,7 +42,7 @@ function openBrowser(url) {
 }
 
 // --- Data store ---
-let db = { competitions: {}, broadcastMessage: '', schedule: [], migrations: {} };
+let db = { competitions: {}, broadcastMessage: '', schedule: [], migrations: {}, feed: [] };
 
 function ensureDefaults() {
   if (!db.competitions || typeof db.competitions !== 'object') db.competitions = {};
@@ -57,6 +57,7 @@ function ensureDefaults() {
   }
   if (!db.schedule) db.schedule = [];
   if (!db.migrations) db.migrations = {};
+  if (!db.feed) db.feed = [];
   // One-time migration: prefix all existing competition names with (F1)
   if (!db.migrations.f1prefix) {
     for (const c of Object.values(db.competitions).filter(Boolean)) {
@@ -70,11 +71,18 @@ async function saveDb() {
   await storage.save(db);
 }
 
+function pushFeedEvent(event) {
+  if (!db.feed) db.feed = [];
+  db.feed.unshift({ id: crypto.randomUUID(), at: Date.now(), ...event });
+  if (db.feed.length > 400) db.feed = db.feed.slice(0, 400);
+}
+
 function broadcast() {
   io.emit('state', {
     competitions: db.competitions,
     broadcastMessage: db.broadcastMessage,
     schedule: db.schedule,
+    feed: db.feed,
   });
 }
 
@@ -298,7 +306,8 @@ app.post('/api/competitions', (req, res) => {
   const { name, trackName } = req.body;
   if (!name || !trackName) return res.status(400).json({ error: 'name and trackName required' });
   const id = crypto.randomUUID();
-  db.competitions[id] = { id, name, trackName, createdAt: Date.now(), active: false, entries: [] };
+  db.competitions[id] = { id, name, trackName, createdAt: Date.now(), slot: null, entries: [] };
+  pushFeedEvent({ type: 'session_created', competitionId: id, competitionName: name, trackName });
   saveDb().then(broadcast);
   res.json(db.competitions[id]);
 });
@@ -318,6 +327,8 @@ app.post('/api/competitions/:id/setslot', (req, res) => {
     Object.values(db.competitions).filter(Boolean).forEach(c => { if (c.id !== comp.id && c.slot === slot) c.slot = null; });
   }
   comp.slot = slot;
+  if (slot) pushFeedEvent({ type: 'session_live', competitionId: comp.id, competitionName: comp.name, trackName: comp.trackName, slot });
+  else pushFeedEvent({ type: 'session_hidden', competitionId: comp.id, competitionName: comp.name });
   saveDb().then(broadcast);
   res.json({ ok: true });
 });
@@ -361,6 +372,7 @@ app.post('/api/competitions/:id/entries', (req, res) => {
   };
   comp.entries.push(entry);
   sortEntries(comp);
+  pushFeedEvent({ type: 'entry_added', competitionId: comp.id, competitionName: comp.name, trackName: comp.trackName, entryId: entry.id, driverName: entry.driverName, lapTime: entry.lapTime, lapTimeMs: entry.lapTimeMs, simulator: entry.simulator, notes: entry.notes });
   saveDb().then(broadcast);
   setTimeout(() => { const e = comp.entries.find(x => x.id === entry.id); if (e) e.isNew = false; }, 3000);
   res.json(entry);
@@ -385,8 +397,9 @@ app.delete('/api/competitions/:id/entries/:entryId', (req, res) => {
   if (!comp) return res.status(404).json({ error: 'Not found' });
   const idx = comp.entries.findIndex(e => e.id === req.params.entryId);
   if (idx === -1) return res.status(404).json({ error: 'Entry not found' });
-  comp.entries.splice(idx, 1);
+  const [removed] = comp.entries.splice(idx, 1);
   sortEntries(comp);
+  pushFeedEvent({ type: 'entry_deleted', competitionId: comp.id, competitionName: comp.name, driverName: removed.driverName, lapTime: removed.lapTime, lapTimeMs: removed.lapTimeMs });
   saveDb().then(broadcast);
   res.json({ ok: true });
 });
@@ -487,6 +500,7 @@ io.on('connection', (socket) => {
     competitions: db.competitions,
     broadcastMessage: db.broadcastMessage,
     schedule: db.schedule,
+    feed: db.feed,
   });
 });
 
