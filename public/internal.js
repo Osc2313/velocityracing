@@ -98,15 +98,24 @@ function updateSlotBar() {
   const bar = document.getElementById('slotBar');
   const chip1 = document.getElementById('slotChip1');
   const chip2 = document.getElementById('slotChip2');
-  if (s1 || s2) {
-    bar.style.display = 'flex';
-    chip1.textContent = s1 ? `S1: ${s1.name}` : 'S1: empty';
-    chip1.className = 'slot-chip' + (s1 ? ' filled' : '') + (s1?.id === selectedCompId ? ' selected' : '');
-    chip2.textContent = s2 ? `S2: ${s2.name}` : 'S2: empty';
-    chip2.className = 'slot-chip' + (s2 ? ' filled' : '') + (s2?.id === selectedCompId ? ' selected' : '');
-  } else {
-    bar.style.display = 'none';
-  }
+  const hasAny = s1 || s2;
+  bar.style.display = hasAny ? 'flex' : 'none';
+  if (!hasAny) return;
+
+  const isS1 = s1?.id === selectedCompId;
+  const isS2 = s2?.id === selectedCompId;
+
+  chip1.innerHTML = s1
+    ? `<span class="slot-chip-label">Screen 1</span><span class="slot-chip-name">${escHtml(s1.name)}</span>`
+    : `<span class="slot-chip-label">Screen 1</span><span class="slot-chip-name slot-chip-empty">—</span>`;
+  chip1.className = 'slot-chip' + (s1 ? ' filled' : ' empty') + (isS1 ? ' selected' : '');
+  chip1.disabled = !s1;
+
+  chip2.innerHTML = s2
+    ? `<span class="slot-chip-label">Screen 2</span><span class="slot-chip-name">${escHtml(s2.name)}</span>`
+    : `<span class="slot-chip-label">Screen 2</span><span class="slot-chip-name slot-chip-empty">—</span>`;
+  chip2.className = 'slot-chip' + (s2 ? ' filled' : ' empty') + (isS2 ? ' selected' : '');
+  chip2.disabled = !s2;
 }
 
 function updateCompButtons() {

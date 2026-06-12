@@ -422,32 +422,61 @@ html, body {
 .slot-bar {
   display: flex;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
   background: var(--bg3);
   border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.slot-bar::before {
+  content: 'Quick switch:';
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-right: 0.25rem;
+  white-space: nowrap;
 }
 .slot-chip {
   display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.75rem;
-  border-radius: 20px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 10px;
   border: 1.5px solid var(--border);
   background: var(--bg2);
-  font-size: 0.75rem;
-  font-weight: 500;
   font-family: 'Inter', sans-serif;
-  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s;
+  min-width: 90px;
+  max-width: 200px;
+}
+.slot-chip:disabled { opacity: 0.45; cursor: default; pointer-events: none; }
+.slot-chip-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+.slot-chip-name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  max-width: 180px;
 }
-.slot-chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
-.slot-chip.filled { border-color: var(--green-border); color: #15803d; background: var(--green-bg); }
-.slot-chip.selected { border-color: var(--blue); color: var(--blue); background: var(--blue-light); font-weight: 600; }
+.slot-chip-empty { color: var(--text-faint); }
+.slot-chip:hover:not(:disabled) { border-color: var(--blue); background: var(--blue-light); }
+.slot-chip:hover:not(:disabled) .slot-chip-label { color: var(--blue); }
+.slot-chip.filled .slot-chip-label { color: #15803d; }
+.slot-chip.filled { border-color: var(--green-border); background: var(--green-bg); }
+.slot-chip.selected { border-color: var(--blue); background: var(--blue-light); box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+.slot-chip.selected .slot-chip-label { color: var(--blue); font-weight: 800; }
+.slot-chip.selected .slot-chip-name { color: var(--blue); font-weight: 600; }
 
 /* ---- ACTIVE BANNER ---- */
 .active-banner {
