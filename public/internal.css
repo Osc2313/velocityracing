@@ -58,6 +58,36 @@ html, body {
 }
 
 /* ---- NAV ---- */
+/* ---- TIMER TOPBAR CHIPS ---- */
+.timer-topbar {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+  overflow: hidden;
+}
+.timer-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+.timer-chip:hover { opacity: 0.75; }
+.chip-ok      { background: #dcfce7; color: #15803d; }
+.chip-warning { background: #fef9c3; color: #92400e; }
+.chip-urgent  { background: #fee2e2; color: var(--red); animation: chipPulse 0.8s ease-in-out infinite; }
+@keyframes chipPulse { 0%,100% { opacity:1; } 50% { opacity:0.55; } }
+
+/* ---- NAV ---- */
 .topnav {
   display: flex;
   align-items: center;

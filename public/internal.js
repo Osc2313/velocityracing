@@ -609,6 +609,25 @@ function renderTimers() {
   SIM_NAMES.forEach(renderTimerCard);
 }
 
+function updateTimerTopbar() {
+  const bar = document.getElementById('timerTopbar');
+  if (!bar) return;
+  const active = SIM_NAMES.filter(sim => simStates[sim].phase !== 'idle');
+  if (!active.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = active.map(sim => {
+    const s = simStates[sim];
+    const label = sim.replace('Sim ', 'S');
+    if (s.phase === 'finished') {
+      return `<div class="timer-chip chip-urgent" onclick="switchTab('timers')">${label} ⏰</div>`;
+    }
+    const m = Math.floor(s.remaining / 60), sec = s.remaining % 60;
+    const t = `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    const pct = s.remaining / s.total;
+    const cls = pct < 0.2 ? 'chip-urgent' : pct < 0.4 ? 'chip-warning' : 'chip-ok';
+    return `<div class="timer-chip ${cls}" onclick="switchTab('timers')">${label} ${t}</div>`;
+  }).join('');
+}
+
 function renderTimerCard(sim) {
   const id = sim.replace(' ', '');
   const card = document.getElementById('timer-' + id);
@@ -666,6 +685,7 @@ function renderTimerCard(sim) {
     const inp = document.getElementById('logDriver-' + id);
     if (inp) setTimeout(() => inp.focus(), 50);
   }
+  updateTimerTopbar();
 }
 
 function startTimer(sim, minutes) {
@@ -693,7 +713,7 @@ function stopTimer(sim) {
   const s = simStates[sim];
   if (s.interval) { clearInterval(s.interval); s.interval = null; }
   s.phase = 'idle';
-  renderTimerCard(sim);
+  renderTimerCard(sim); // also calls updateTimerTopbar
 }
 window.stopTimer = stopTimer;
 
@@ -703,7 +723,7 @@ function resetTimer(sim) {
   s.phase = 'idle';
   s.remaining = 0;
   s.total = 0;
-  renderTimerCard(sim);
+  renderTimerCard(sim); // also calls updateTimerTopbar
 }
 window.resetTimer = resetTimer;
 
