@@ -744,10 +744,12 @@ socket.on('timers', (state) => {
   updateTimerTopbar();
 });
 
-// Single shared tick — re-renders every second while any timer is running
+// Single shared tick — re-renders only running cards each second
 setInterval(() => {
-  const anyRunning = SIM_NAMES.some(s => serverTimers[s].phase === 'running');
-  if (anyRunning) renderTimers();
+  SIM_NAMES.forEach(sim => {
+    if (serverTimers[sim].phase === 'running') renderTimerCard(sim);
+  });
+  updateTimerTopbar();
 }, 1000);
 
 function calcRemaining(s) {
