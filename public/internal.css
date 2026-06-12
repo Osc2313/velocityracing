@@ -224,38 +224,9 @@ html, body {
   color: var(--red);
 }
 
-.timer-log-form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  margin-top: 0.25rem;
-  text-align: left;
-}
-.timer-field-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-.timer-input {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-family: 'Inter', sans-serif;
-  width: 100%;
-  min-height: 36px;
-}
-.timer-input:focus { outline: none; border-color: var(--border-focus); background: #fff; }
 .timer-log-actions {
   display: flex;
   gap: 0.35rem;
-  margin-top: 0.1rem;
 }
 .timer-log-actions .btn { flex: 1; }
 .timer-success {
@@ -266,6 +237,38 @@ html, body {
   animation: fadeIn 0.3s ease;
 }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+/* ---- SESSION PILLS (timer modal) ---- */
+.session-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0;
+}
+.session-pill {
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg3);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.session-pill:hover { border-color: var(--blue); color: var(--blue); }
+.session-pill.active {
+  border-color: var(--blue);
+  background: var(--blue-light);
+  color: var(--blue);
+  font-weight: 600;
+}
 
 /* ---- SLOT BUTTONS ---- */
 .btn-slot-active {

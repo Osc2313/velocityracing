@@ -664,27 +664,13 @@ function renderTimerCard(sim) {
     html += `
       <div class="timer-display timer-urgent">00:00</div>
       <div class="timer-finished-label">⏰ Time's up!</div>
-      <div class="timer-log-form">
-        <label class="timer-field-label">Driver Name
-          <input class="timer-input" id="logDriver-${id}" type="text" placeholder="John Smith" autocomplete="off">
-        </label>
-        <label class="timer-field-label">Lap Time
-          <input class="timer-input" id="logTime-${id}" type="text" placeholder="1:23.456" autocomplete="off">
-        </label>
-        <div class="timer-log-actions">
-          <button class="btn btn-primary btn-sm" onclick="logLapTime('${sim}')">Log Lap Time</button>
-          <button class="btn btn-outline btn-sm" onclick="resetTimer('${sim}')">New Timer</button>
-        </div>
+      <div class="timer-log-actions" style="margin-top:0.5rem">
+        <button class="btn btn-primary btn-sm" onclick="openTimerLogModal('${sim}')">Log Lap Time</button>
+        <button class="btn btn-outline btn-sm" onclick="resetTimer('${sim}')">Skip</button>
       </div>`;
   }
 
   card.innerHTML = html;
-
-  // Auto-focus driver name field when finished
-  if (s.phase === 'finished') {
-    const inp = document.getElementById('logDriver-' + id);
-    if (inp) setTimeout(() => inp.focus(), 50);
-  }
   updateTimerTopbar();
 }
 
@@ -703,6 +689,7 @@ function startTimer(sim, minutes) {
       clearInterval(s.interval);
       s.interval = null;
       if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+      setTimeout(() => openTimerLogModal(sim), 300);
     }
     renderTimerCard(sim);
   }, 1000);
@@ -727,34 +714,82 @@ function resetTimer(sim) {
 }
 window.resetTimer = resetTimer;
 
-async function logLapTime(sim) {
-  if (!selectedCompId) {
-    alert('Select a competition on the Leaderboard tab first.');
-    return;
-  }
-  const id = sim.replace(' ', '');
-  const driverName = document.getElementById('logDriver-' + id)?.value.trim();
-  const lapTime    = document.getElementById('logTime-'   + id)?.value.trim();
-  if (!driverName || !lapTime) {
-    alert('Enter both the driver name and lap time.');
-    return;
-  }
-  try {
-    await apiFetch(`/api/competitions/${selectedCompId}/entries`, 'POST', {
-      lapTime, driverName, simulator: sim,
-    });
-    resetTimer(sim);
-    // Brief success flash on the card
-    const card = document.getElementById('timer-' + id);
-    if (card) {
-      const msg = document.createElement('div');
-      msg.className = 'timer-success';
-      msg.textContent = `✓ ${driverName} logged`;
-      card.appendChild(msg);
-      setTimeout(() => msg.remove(), 2500);
-    }
-  } catch (err) {
-    alert('Could not log lap time: ' + err.message);
-  }
+function openTimerLogModal(sim) {
+  const all = Object.values(competitions).filter(Boolean);
+  const s1 = all.find(c => c.slot === 1);
+  const s2 = all.find(c => c.slot === 2);
+
+  document.getElementById('timerLogSim').value = sim;
+  document.getElementById('timerLogSimName').textContent = sim;
+  document.getElementById('timerLogDriver').value = '';
+  document.getElementById('timerLogTime').value = '';
+  document.getElementById('timerLogError').style.display = 'none';
+
+  // Live screen quick-pick pills
+  const pillsEl = document.getElementById('timerSessionPills');
+  pillsEl.innerHTML = [s1 && { id: s1.id, label: `S1: ${s1.name}` }, s2 && { id: s2.id, label: `S2: ${s2.name}` }]
+    .filter(Boolean)
+    .map(p => `<button type="button" class="session-pill" data-id="${p.id}" onclick="pickTimerSession('${p.id}')">${escHtml(p.label)}</button>`)
+    .join('');
+
+  // Populate full dropdown
+  const sel = document.getElementById('timerLogComp');
+  sel.innerHTML = '<option value="">— Select session —</option>';
+  all.sort((a,b) => b.createdAt - a.createdAt).forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${c.name} — ${c.trackName}`;
+    sel.appendChild(opt);
+  });
+
+  // Auto-select: prefer single live screen, else last selected comp
+  if (s1 && !s2) pickTimerSession(s1.id);
+  else if (s2 && !s1) pickTimerSession(s2.id);
+  else if (selectedCompId) pickTimerSession(selectedCompId);
+
+  document.getElementById('timerLogModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('timerLogDriver').focus(), 80);
 }
-window.logLapTime = logLapTime;
+window.openTimerLogModal = openTimerLogModal;
+
+function pickTimerSession(compId) {
+  document.getElementById('timerLogComp').value = compId;
+  document.querySelectorAll('#timerSessionPills .session-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.id === compId);
+  });
+}
+window.pickTimerSession = pickTimerSession;
+
+document.getElementById('timerLogSubmit').addEventListener('click', async () => {
+  const sim = document.getElementById('timerLogSim').value;
+  const compId = document.getElementById('timerLogComp').value;
+  const driverName = document.getElementById('timerLogDriver').value.trim();
+  const lapTime = document.getElementById('timerLogTime').value.trim();
+  const errEl = document.getElementById('timerLogError');
+  errEl.style.display = 'none';
+  if (!compId) { errEl.textContent = 'Select a session.'; errEl.style.display = 'block'; return; }
+  if (!driverName) { errEl.textContent = 'Enter a driver name.'; errEl.style.display = 'block'; return; }
+  if (!lapTime) { errEl.textContent = 'Enter a lap time.'; errEl.style.display = 'block'; return; }
+  try {
+    await apiFetch(`/api/competitions/${compId}/entries`, 'POST', { lapTime, driverName, simulator: sim });
+    document.getElementById('timerLogModal').style.display = 'none';
+    resetTimer(sim);
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+});
+
+document.getElementById('timerLogCancel').addEventListener('click', () => {
+  const sim = document.getElementById('timerLogSim').value;
+  document.getElementById('timerLogModal').style.display = 'none';
+  resetTimer(sim);
+});
+
+document.getElementById('timerLogModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    const sim = document.getElementById('timerLogSim').value;
+    document.getElementById('timerLogModal').style.display = 'none';
+    resetTimer(sim);
+  }
+});

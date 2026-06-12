@@ -196,6 +196,37 @@
     </div>
   </div>
 
+  <!-- Timer Lap Time Modal -->
+  <div class="modal-overlay" id="timerLogModal" style="display:none">
+    <div class="modal">
+      <h2>Log Lap Time — <span id="timerLogSimName"></span></h2>
+      <input type="hidden" id="timerLogSim">
+
+      <label>Session *
+        <div class="session-pills" id="timerSessionPills"></div>
+        <select id="timerLogComp" style="margin-top:0.5rem">
+          <option value="">— Select session —</option>
+        </select>
+      </label>
+
+      <label>Driver Name *
+        <input type="text" id="timerLogDriver" placeholder="John Smith" autocomplete="off">
+      </label>
+
+      <label>Lap Time *
+        <input type="text" id="timerLogTime" placeholder="1:23.456" autocomplete="off">
+        <span class="hint">Format: M:SS.mmm or SS.mmm</span>
+      </label>
+
+      <div class="form-error" id="timerLogError" style="display:none"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="timerLogCancel">Skip</button>
+        <button type="button" class="btn btn-primary" id="timerLogSubmit">Add Time</button>
+      </div>
+    </div>
+  </div>
+
   <!-- New Competition Modal -->
   <div class="modal-overlay" id="newCompModal" style="display:none">
     <div class="modal">
