@@ -44,6 +44,17 @@ function openBrowser(url) {
 // --- Data store ---
 let db = { competitions: {}, broadcastMessage: '', schedule: [], migrations: {}, feed: [] };
 
+// --- In-memory timer state (not persisted; synced to all clients via socket) ---
+const SIM_NAMES = ['Sim 1', 'Sim 2', 'Sim 3', 'Sim 4'];
+const timers = {};
+SIM_NAMES.forEach(sim => {
+  timers[sim] = { phase: 'idle', startedAt: null, total: 0 };
+});
+
+function broadcastTimers() {
+  io.emit('timers', timers);
+}
+
 function ensureDefaults() {
   if (!db.competitions || typeof db.competitions !== 'object') db.competitions = {};
   for (const id of Object.keys(db.competitions)) {
@@ -501,6 +512,42 @@ io.on('connection', (socket) => {
     broadcastMessage: db.broadcastMessage,
     schedule: db.schedule,
     feed: db.feed,
+  });
+  socket.emit('timers', timers);
+
+  socket.on('timer:start', ({ sim, minutes }) => {
+    if (!timers[sim]) return;
+    const t = timers[sim];
+    if (t._timeout) clearTimeout(t._timeout);
+    t.phase = 'running';
+    t.startedAt = Date.now();
+    t.total = minutes * 60 * 1000;
+    t._timeout = setTimeout(() => {
+      t.phase = 'finished';
+      t._timeout = null;
+      broadcastTimers();
+    }, t.total);
+    broadcastTimers();
+  });
+
+  socket.on('timer:stop', ({ sim }) => {
+    if (!timers[sim]) return;
+    const t = timers[sim];
+    if (t._timeout) { clearTimeout(t._timeout); t._timeout = null; }
+    t.phase = 'idle';
+    t.startedAt = null;
+    t.total = 0;
+    broadcastTimers();
+  });
+
+  socket.on('timer:reset', ({ sim }) => {
+    if (!timers[sim]) return;
+    const t = timers[sim];
+    if (t._timeout) { clearTimeout(t._timeout); t._timeout = null; }
+    t.phase = 'idle';
+    t.startedAt = null;
+    t.total = 0;
+    broadcastTimers();
   });
 });
 

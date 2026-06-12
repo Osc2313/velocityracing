@@ -707,35 +707,62 @@ function renderFeed() {
 });
 
 // ============================================================
-// SIM TIMERS
+// SIM TIMERS — server-authoritative, synced via socket
 // ============================================================
 
 const SIM_NAMES = ['Sim 1', 'Sim 2', 'Sim 3', 'Sim 4'];
 const SIM_IDS   = ['Sim1',  'Sim2',  'Sim3',  'Sim4'];
 
-const simStates = {};
-SIM_NAMES.forEach((sim, i) => {
-  simStates[sim] = { phase: 'idle', remaining: 0, total: 0, interval: null };
+// Server state received via socket — keyed by sim name
+let serverTimers = {};
+SIM_NAMES.forEach(sim => { serverTimers[sim] = { phase: 'idle', startedAt: null, total: 0 }; });
+
+// Track which sims were already finished so we only vibrate once
+const _alreadyFinished = new Set();
+
+socket.on('timers', (state) => {
+  SIM_NAMES.forEach(sim => {
+    const prev = serverTimers[sim];
+    const next = state[sim] || { phase: 'idle', startedAt: null, total: 0 };
+    serverTimers[sim] = next;
+    if (next.phase === 'finished' && prev.phase !== 'finished') {
+      if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+    }
+  });
+  renderTimers();
 });
+
+// Single shared tick — re-renders every second while any timer is running
+setInterval(() => {
+  const anyRunning = SIM_NAMES.some(s => serverTimers[s].phase === 'running');
+  if (anyRunning) renderTimers();
+}, 1000);
+
+function calcRemaining(s) {
+  if (s.phase !== 'running') return 0;
+  return Math.max(0, Math.round((s.startedAt + s.total - Date.now()) / 1000));
+}
 
 function renderTimers() {
   SIM_NAMES.forEach(renderTimerCard);
+  updateTimerTopbar();
 }
 
 function updateTimerTopbar() {
   const bar = document.getElementById('timerTopbar');
   if (!bar) return;
-  const active = SIM_NAMES.filter(sim => simStates[sim].phase !== 'idle');
+  const active = SIM_NAMES.filter(sim => serverTimers[sim].phase !== 'idle');
   if (!active.length) { bar.innerHTML = ''; return; }
   bar.innerHTML = active.map(sim => {
-    const s = simStates[sim];
+    const s = serverTimers[sim];
     const label = sim.replace('Sim ', 'S');
     if (s.phase === 'finished') {
       return `<div class="timer-chip chip-urgent" onclick="switchTab('timers')">${label} ⏰</div>`;
     }
-    const m = Math.floor(s.remaining / 60), sec = s.remaining % 60;
+    const rem = calcRemaining(s);
+    const m = Math.floor(rem / 60), sec = rem % 60;
     const t = `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-    const pct = s.remaining / s.total;
+    const pct = s.total > 0 ? (rem * 1000) / s.total : 1;
     const cls = pct < 0.2 ? 'chip-urgent' : pct < 0.4 ? 'chip-warning' : 'chip-ok';
     return `<div class="timer-chip ${cls}" onclick="switchTab('timers')">${label} ${t}</div>`;
   }).join('');
@@ -745,11 +772,12 @@ function renderTimerCard(sim) {
   const id = sim.replace(' ', '');
   const card = document.getElementById('timer-' + id);
   if (!card) return;
-  const s = simStates[sim];
+  const s = serverTimers[sim];
+  const rem = calcRemaining(s);
 
-  const mins = Math.floor(s.remaining / 60);
-  const secs = s.remaining % 60;
-  const display = s.remaining > 0
+  const mins = Math.floor(rem / 60);
+  const secs = rem % 60;
+  const display = rem > 0
     ? `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`
     : '00:00';
 
@@ -766,7 +794,7 @@ function renderTimerCard(sim) {
       </div>`;
 
   } else if (s.phase === 'running') {
-    const pct = s.remaining / s.total;
+    const pct = s.total > 0 ? (rem * 1000) / s.total : 1;
     const cls = pct < 0.2 ? 'urgent' : pct < 0.4 ? 'warning' : 'ok';
     html += `
       <div class="timer-display timer-${cls}">${display}</div>
@@ -784,6 +812,13 @@ function renderTimerCard(sim) {
     const opts = all.sort((a,b) => b.createdAt - a.createdAt)
       .map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
     const autoId = s1 && !s2 ? s1.id : s2 && !s1 ? s2.id : selectedCompId || '';
+
+    // Preserve existing input values across re-renders
+    const prevComp   = document.getElementById(`tiInlineComp-${id}`)?.value || autoId;
+    const prevDriver = document.getElementById(`tiDriver-${id}`)?.value || '';
+    const prevLap    = document.getElementById(`tiLapTime-${id}`)?.value || '';
+    const prevPhone  = document.getElementById(`tiPhone-${id}`)?.value || '';
+
     html += `
       <div class="timer-display timer-urgent">00:00</div>
       <div class="timer-finished-label">⏰ Time's up!</div>
@@ -792,62 +827,36 @@ function renderTimerCard(sim) {
         <select class="timer-input" id="tiInlineComp-${id}" onchange="syncTimerPills('${id}')">
           <option value="">— Session —</option>${opts}
         </select>
-        <input class="timer-input" id="tiDriver-${id}" type="text" placeholder="Driver name" autocomplete="off">
-        <input class="timer-input" id="tiLapTime-${id}" type="text" placeholder="1:23.456" autocomplete="off">
-        <input class="timer-input" id="tiPhone-${id}" type="tel" placeholder="Phone (optional)">
+        <input class="timer-input" id="tiDriver-${id}" type="text" placeholder="Driver name" autocomplete="off" value="${escHtml(prevDriver)}">
+        <input class="timer-input" id="tiLapTime-${id}" type="text" placeholder="1:23.456" autocomplete="off" value="${escHtml(prevLap)}">
+        <input class="timer-input" id="tiPhone-${id}" type="tel" placeholder="Phone (optional)" value="${escHtml(prevPhone)}">
         <div class="form-error" id="tiError-${id}" style="display:none;font-size:0.72rem"></div>
         <div class="timer-log-actions">
           <button class="btn btn-primary btn-sm" onclick="submitTimerInline('${sim}')">Log</button>
           <button class="btn btn-outline btn-sm" onclick="resetTimer('${sim}')">Skip</button>
         </div>
       </div>`;
-    // auto-select session after render
-    if (autoId) setTimeout(() => {
+    setTimeout(() => {
       const sel = document.getElementById(`tiInlineComp-${id}`);
-      if (sel) { sel.value = autoId; syncTimerPills(id); }
-    }, 30);
+      if (sel && prevComp) { sel.value = prevComp; syncTimerPills(id); }
+    }, 0);
   }
 
   card.innerHTML = html;
-  updateTimerTopbar();
 }
 
 function startTimer(sim, minutes) {
-  const s = simStates[sim];
-  if (s.interval) clearInterval(s.interval);
-  s.total = minutes * 60;
-  s.remaining = s.total;
-  s.phase = 'running';
-  renderTimerCard(sim);
-  s.interval = setInterval(() => {
-    s.remaining--;
-    if (s.remaining <= 0) {
-      s.remaining = 0;
-      s.phase = 'finished';
-      clearInterval(s.interval);
-      s.interval = null;
-      if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
-    }
-    renderTimerCard(sim);
-  }, 1000);
+  socket.emit('timer:start', { sim, minutes });
 }
 window.startTimer = startTimer;
 
 function stopTimer(sim) {
-  const s = simStates[sim];
-  if (s.interval) { clearInterval(s.interval); s.interval = null; }
-  s.phase = 'idle';
-  renderTimerCard(sim); // also calls updateTimerTopbar
+  socket.emit('timer:stop', { sim });
 }
 window.stopTimer = stopTimer;
 
 function resetTimer(sim) {
-  const s = simStates[sim];
-  if (s.interval) { clearInterval(s.interval); s.interval = null; }
-  s.phase = 'idle';
-  s.remaining = 0;
-  s.total = 0;
-  renderTimerCard(sim); // also calls updateTimerTopbar
+  socket.emit('timer:reset', { sim });
 }
 window.resetTimer = resetTimer;
 
