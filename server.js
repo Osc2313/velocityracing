@@ -51,8 +51,17 @@ SIM_NAMES.forEach(sim => {
   timers[sim] = { phase: 'idle', startedAt: null, total: 0 };
 });
 
+function serializeTimers() {
+  const out = {};
+  SIM_NAMES.forEach(sim => {
+    const { phase, startedAt, total } = timers[sim];
+    out[sim] = { phase, startedAt, total };
+  });
+  return out;
+}
+
 function broadcastTimers() {
-  io.emit('timers', timers);
+  io.emit('timers', serializeTimers());
 }
 
 function ensureDefaults() {
@@ -513,7 +522,7 @@ io.on('connection', (socket) => {
     schedule: db.schedule,
     feed: db.feed,
   });
-  socket.emit('timers', timers);
+  socket.emit('timers', serializeTimers());
 
   socket.on('timer:start', ({ sim, minutes }) => {
     if (!timers[sim]) return;

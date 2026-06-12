@@ -727,9 +727,12 @@ socket.on('timers', (state) => {
     serverTimers[sim] = next;
     if (next.phase === 'finished' && prev.phase !== 'finished') {
       if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+      renderTimerCard(sim);
+    } else if (next.phase !== prev.phase) {
+      renderTimerCard(sim);
     }
   });
-  renderTimers();
+  updateTimerTopbar();
 });
 
 // Single shared tick — re-renders every second while any timer is running
