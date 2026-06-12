@@ -807,20 +807,19 @@ select {
   display: flex;
   flex-direction: column;
   gap: 0;
-  height: calc(100vh - 120px);
-  overflow: hidden;
 }
 
 @media (min-width: 700px) {
   .schedule-layout {
     flex-direction: row;
     align-items: stretch;
+    height: calc(100vh - 120px);
+    overflow: hidden;
   }
 }
 
 .schedule-form-col {
   padding: 1rem;
-  overflow-y: auto;
   flex-shrink: 0;
 }
 
@@ -828,6 +827,7 @@ select {
   .schedule-form-col {
     width: 280px;
     border-right: 1px solid var(--border);
+    overflow-y: auto;
   }
 }
 
@@ -835,8 +835,13 @@ select {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   min-width: 0;
+}
+
+@media (min-width: 700px) {
+  .schedule-timetable-col {
+    overflow: hidden;
+  }
 }
 
 .timetable-header-row {
@@ -866,6 +871,7 @@ select {
 .timetable-body {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .timetable-cols {
